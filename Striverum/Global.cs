@@ -19,6 +19,18 @@ namespace Striverum
         public static List<string> games;
         public static ObservableCollection<String> LoadoutItems;
         public static ObservableCollection<Mod> ModList;
+        public static string GetCurrentModDirectory()
+        {
+            if (config?.Configs != null && config.Configs.ContainsKey(config.CurrentGame))
+            {
+                var custom = config.Configs[config.CurrentGame].CustomModsFolder;
+                if (!string.IsNullOrEmpty(custom) && Directory.Exists(custom))
+                {
+                    return custom;
+                }
+            }
+            return $@"{assemblyLocation}{s}Mods{s}{config?.CurrentGame ?? "Guilty Gear -Strive-"}";
+        }
         public static void UpdateConfig()
         {
             if (config == null) return;

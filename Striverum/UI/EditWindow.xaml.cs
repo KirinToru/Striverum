@@ -77,7 +77,7 @@ namespace Striverum.UI
         }
         private void CreateName()
         {
-            var newDirectory = $"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{NameBox.Text}";
+            var newDirectory = $"{Global.GetCurrentModDirectory()}{Global.s}{NameBox.Text}";
             if (!Directory.Exists(newDirectory))
             {
                 directory = newDirectory;
@@ -105,8 +105,8 @@ namespace Striverum.UI
         {
             if (!NameBox.Text.Equals(_name, StringComparison.InvariantCultureIgnoreCase))
             {
-                var oldDirectory = $"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{_name}";
-                var newDirectory = $"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{NameBox.Text}";
+                var oldDirectory = $"{Global.GetCurrentModDirectory()}{Global.s}{_name}";
+                var newDirectory = $"{Global.GetCurrentModDirectory()}{Global.s}{NameBox.Text}";
                 if (!Directory.Exists(newDirectory))
                 {
                     try
@@ -143,7 +143,7 @@ namespace Striverum.UI
             StatusBlock.Visibility = Visibility.Collapsed;
             if (!_folder || string.IsNullOrEmpty(_name)) return;
 
-            string currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            string currentModDirectory = Global.GetCurrentModDirectory();
             string modDir = $@"{currentModDirectory}{Global.s}{_name}";
             string modJsonPath = $@"{modDir}{Global.s}mod.json";
 

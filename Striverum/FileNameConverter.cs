@@ -21,7 +21,7 @@ namespace Striverum.UI
     {
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            return ((string)value).Replace($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", "...");
+            return ((string)value).Replace(Global.GetCurrentModDirectory(), "...");
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)

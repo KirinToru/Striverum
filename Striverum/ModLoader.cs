@@ -261,7 +261,7 @@ namespace Striverum
                     priorityName += "~";
                 priorityName += folderLetter;
                 var folder = $"{path}{Global.s}{priorityName}{Global.s}{mod.name}";
-                var modPath = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{mod.name}";
+                var modPath = $@"{Global.GetCurrentModDirectory()}{Global.s}{mod.name}";
                 var paks = mod.paks;
                 // Copy over .paks and .sigs to ~mods folder in order
                 if (CopyFolder(paks, modPath, folder, sig) > 0)

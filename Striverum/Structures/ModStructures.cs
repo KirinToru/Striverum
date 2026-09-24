@@ -103,6 +103,7 @@ namespace Striverum
         public bool LauncherOptionConverted { get; set; }
         public bool FirstOpen { get; set; }
         public string ModsFolder { get; set; }
+        public string CustomModsFolder { get; set; }
         public string PatchesFolder { get; set; }
         public long? PakLength { get; set; }
         public ObservableCollection<Mod> ModList { get; set; }

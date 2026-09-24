@@ -25,7 +25,7 @@ namespace Striverum
                 ModNameBlock.Text = _mod.name;
 
                 // Pre-fill existing URL if available
-                string modJsonPath = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{_mod.name}{Global.s}mod.json";
+                string modJsonPath = $@"{Global.GetCurrentModDirectory()}{Global.s}{_mod.name}{Global.s}mod.json";
                 if (File.Exists(modJsonPath))
                 {
                     try
@@ -128,7 +128,7 @@ namespace Striverum
                 if (record.Category != null && !string.IsNullOrEmpty(record.Category.Name) && !metadata.tags.Contains(record.Category.Name))
                     metadata.tags.Add(record.Category.Name);
 
-                string modDir = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{_mod.name}";
+                string modDir = $@"{Global.GetCurrentModDirectory()}{Global.s}{_mod.name}";
                 Directory.CreateDirectory(modDir);
                 string metadataString = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText($@"{modDir}{Global.s}mod.json", metadataString);

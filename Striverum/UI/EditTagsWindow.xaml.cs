@@ -43,7 +43,7 @@ namespace Striverum.UI
         private List<string> GetDefaultTags()
         {
             var defaultTags = new List<string>();
-            string currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            string currentModDirectory = Global.GetCurrentModDirectory();
             string modJsonPath = $@"{currentModDirectory}{Global.s}{_mod.name}{Global.s}mod.json";
 
             Metadata meta = null;
@@ -144,7 +144,7 @@ namespace Striverum.UI
             // Persist to mod.json
             try
             {
-                string currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+                string currentModDirectory = Global.GetCurrentModDirectory();
                 string modJsonPath = $@"{currentModDirectory}{Global.s}{_mod.name}{Global.s}mod.json";
                 Metadata meta = null;
                 if (File.Exists(modJsonPath))

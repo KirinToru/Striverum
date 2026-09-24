@@ -20,6 +20,7 @@ namespace Striverum
         {
             await Task.Run(() =>
             {
+                Directory.CreateDirectory(destDirPath);
                 try
                 {
                     using (var archive = SevenZipArchive.Open(sourceFilePath))

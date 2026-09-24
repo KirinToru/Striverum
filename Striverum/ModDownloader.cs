@@ -197,18 +197,19 @@ namespace Striverum
                 game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
-                string ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
+                string ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
                 // Find a unique destination if it already exists
                 var counter = 2;
                 while (Directory.Exists(ArchiveDestination))
                 {
-                    ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
+                    ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
                     ++counter;
                 }
                 if (File.Exists(_ArchiveSource))
                 {
                     try
                     {
+                        Directory.CreateDirectory(ArchiveDestination);
                         if (Path.GetExtension(_ArchiveSource).Equals(".7z", StringComparison.InvariantCultureIgnoreCase))
                         {
                             using (var archive = SevenZipArchive.Open(_ArchiveSource))
@@ -287,12 +288,24 @@ namespace Striverum
                     }
                     catch (Exception e)
                     {
+                        try
+                        {
+                            if (Directory.Exists(ArchiveDestination) && Directory.GetFileSystemEntries(ArchiveDestination).Length == 0)
+                                Directory.Delete(ArchiveDestination, true);
+                        }
+                        catch { }
                         MessageBox.Show($"Couldn't extract {fileName}: {e.Message}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 // Check if folder output folder exists, if not nothing was extracted
-                if (!Directory.Exists(ArchiveDestination))
+                if (!Directory.Exists(ArchiveDestination) || Directory.GetFileSystemEntries(ArchiveDestination).Length == 0)
                 {
+                    try
+                    {
+                        if (Directory.Exists(ArchiveDestination))
+                            Directory.Delete(ArchiveDestination, true);
+                    }
+                    catch { }
                     MessageBox.Show($"Didn't extract {fileName} due to improper format", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else
@@ -310,18 +323,19 @@ namespace Striverum
                 game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
-                string ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
+                string ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
                 // Find a unique destination if it already exists
                 var counter = 2;
                 while (Directory.Exists(ArchiveDestination))
                 {
-                    ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
+                    ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
                     ++counter;
                 }
                 if (File.Exists(_ArchiveSource))
                 {
                     try
                     {
+                        Directory.CreateDirectory(ArchiveDestination);
                         if (Path.GetExtension(_ArchiveSource).Equals(".7z", StringComparison.InvariantCultureIgnoreCase))
                         {
                             using (var archive = SevenZipArchive.Open(_ArchiveSource))
@@ -400,12 +414,24 @@ namespace Striverum
                     }
                     catch (Exception e)
                     {
+                        try
+                        {
+                            if (Directory.Exists(ArchiveDestination) && Directory.GetFileSystemEntries(ArchiveDestination).Length == 0)
+                                Directory.Delete(ArchiveDestination, true);
+                        }
+                        catch { }
                         MessageBox.Show($"Couldn't extract {fileName}: {e.Message}", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 // Check if folder output folder exists, if not nothing was extracted
-                if (!Directory.Exists(ArchiveDestination))
+                if (!Directory.Exists(ArchiveDestination) || Directory.GetFileSystemEntries(ArchiveDestination).Length == 0)
                 {
+                    try
+                    {
+                        if (Directory.Exists(ArchiveDestination))
+                            Directory.Delete(ArchiveDestination, true);
+                    }
+                    catch { }
                     MessageBox.Show($"Didn't extract {fileName} due to improper format", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else

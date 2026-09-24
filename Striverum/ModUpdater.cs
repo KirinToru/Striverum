@@ -360,6 +360,7 @@ namespace Striverum
                 {
                     try
                     {
+                        Directory.CreateDirectory(ArchiveDestination);
                         if (Path.GetExtension(_ArchiveSource).Equals(".7z", StringComparison.InvariantCultureIgnoreCase))
                         {
                             using (var archive = SevenZipArchive.Open(_ArchiveSource))

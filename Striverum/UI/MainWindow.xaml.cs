@@ -1350,10 +1350,11 @@ namespace Striverum
             if (LauncherOptions.Count > 2)
                 LauncherOptions.RemoveAt(2);
 
-            Directory.CreateDirectory($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}");
+            string modDirectory = Global.GetCurrentModDirectory();
+            Directory.CreateDirectory(modDirectory);
 
             // Watch mods folder to detect
-            ModsWatcher = new FileSystemWatcher($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}");
+            ModsWatcher = new FileSystemWatcher(modDirectory);
             ModsWatcher.Created += OnModified;
             ModsWatcher.Deleted += OnModified;
             ModsWatcher.Renamed += OnModified;
@@ -1392,7 +1393,7 @@ namespace Striverum
             LauncherOptionsBox.IsEnabled = false;
             App.Current.Dispatcher.Invoke(() =>
             {
-                ModUpdater.CheckForUpdates($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", this);
+                ModUpdater.CheckForUpdates(Global.GetCurrentModDirectory(), this);
             });
         }
         private void WindowLoaded(object sender, RoutedEventArgs e)
@@ -1421,7 +1422,7 @@ namespace Striverum
 
         private async void Refresh()
         {
-            var currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            var currentModDirectory = Global.GetCurrentModDirectory();
             if (!Directory.Exists(currentModDirectory)) return;
 
             // Add new folders found in Mods to the ModList
@@ -1618,7 +1619,7 @@ namespace Striverum
         }
         private void RefreshAll()
         {
-            var currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            var currentModDirectory = Global.GetCurrentModDirectory();
             if (!Directory.Exists(currentModDirectory)) return;
 
             var currlist = Global.config.Configs[Global.config.CurrentGame].CurrentLoadout;
@@ -1996,7 +1997,7 @@ namespace Striverum
                         if (ModsWatcher != null)
                             ModsWatcher.EnableRaisingEvents = false;
 
-                        string modDir = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{row.name}";
+                        string modDir = $@"{Global.GetCurrentModDirectory()}{Global.s}{row.name}";
                         if (Directory.Exists(modDir))
                         {
                             await Task.Run(() =>
@@ -2108,7 +2109,7 @@ namespace Striverum
             foreach (var row in temp)
                 if (row != null)
                 {
-                    var folderName = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{row.name}";
+                    var folderName = $@"{Global.GetCurrentModDirectory()}{Global.s}{row.name}";
                     if (Directory.Exists(folderName))
                     {
                         try
@@ -2264,8 +2265,8 @@ namespace Striverum
             });
             choices.Add(new Choice()
             {
-                OptionText = "Open Mods Folder",
-                OptionSubText = "Drag or extract mod folders into this directory",
+                OptionText = "Choose Mods Folder",
+                OptionSubText = "Select your mods directory (saved in config, no file duplication)",
                 Index = 1,
                 FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_FolderOpen
             });
@@ -2299,18 +2300,74 @@ namespace Striverum
             }
             else if (choice.choice != null && (int)choice.choice == 1)
             {
-                var folderName = $"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
-                if (Directory.Exists(folderName))
+                using var dialog = new System.Windows.Forms.FolderBrowserDialog();
+                dialog.Description = "Select folder containing mods";
+                dialog.UseDescriptionForTitle = true;
+                dialog.ShowNewFolderButton = true;
+                string currentDir = Global.GetCurrentModDirectory();
+                if (Directory.Exists(currentDir))
                 {
+                    dialog.InitialDirectory = currentDir;
+                }
+
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+                {
+                    string targetFolder = dialog.SelectedPath;
+
+                    // Organize any loose .pak files in targetFolder into mod subfolders
                     try
                     {
-                        Process process = Process.Start("explorer.exe", folderName);
-                        Global.logger.WriteLine($@"Opened {folderName}.", LoggerType.Info);
+                        var loosePaks = Directory.GetFiles(targetFolder, "*.pak", SearchOption.TopDirectoryOnly);
+                        foreach (var pakPath in loosePaks)
+                        {
+                            string pakName = Path.GetFileNameWithoutExtension(pakPath);
+                            string modSubfolder = Path.Combine(targetFolder, pakName);
+                            if (!Directory.Exists(modSubfolder))
+                            {
+                                Directory.CreateDirectory(modSubfolder);
+                            }
+                            string destPak = Path.Combine(modSubfolder, Path.GetFileName(pakPath));
+                            if (!File.Exists(destPak))
+                            {
+                                File.Move(pakPath, destPak);
+                            }
+                            string sigPath = Path.ChangeExtension(pakPath, ".sig");
+                            if (File.Exists(sigPath))
+                            {
+                                string destSig = Path.Combine(modSubfolder, Path.GetFileName(sigPath));
+                                if (!File.Exists(destSig))
+                                {
+                                    File.Move(sigPath, destSig);
+                                }
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Global.logger.WriteLine($@"Couldn't open {folderName}. ({ex.Message})", LoggerType.Error);
+                        Global.logger?.WriteLine($"Error organizing loose paks: {ex.Message}", LoggerType.Warning);
                     }
+
+                    // Save custom folder to config
+                    if (Global.config.Configs == null) Global.config.Configs = new();
+                    if (!Global.config.Configs.ContainsKey(Global.config.CurrentGame))
+                        Global.config.Configs[Global.config.CurrentGame] = new();
+
+                    Global.config.Configs[Global.config.CurrentGame].CustomModsFolder = targetFolder;
+                    Global.UpdateConfig();
+
+                    // Update watcher
+                    if (ModsWatcher != null)
+                    {
+                        ModsWatcher.EnableRaisingEvents = false;
+                        ModsWatcher.Path = targetFolder;
+                        ModsWatcher.EnableRaisingEvents = true;
+                    }
+
+                    // Refresh mods list
+                    RefreshAll();
+                    Refresh();
+                    Global.logger?.WriteLine($"Mods folder set to: {targetFolder}", LoggerType.Info);
+                    MessageBox.Show($"Mods folder has been set to:\n{targetFolder}", "Mods Folder Updated", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
         }
@@ -2328,7 +2385,7 @@ namespace Striverum
             LauncherOptionsBox.IsEnabled = false;
             App.Current.Dispatcher.Invoke(() =>
             {
-                ModUpdater.CheckForUpdates($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", this);
+                ModUpdater.CheckForUpdates(Global.GetCurrentModDirectory(), this);
             });
         }
         private Paragraph ConvertToFlowParagraph(string text)
@@ -2386,7 +2443,7 @@ namespace Striverum
 
         private void ShowMetadata(string mod)
         {
-            if (mod == null || !File.Exists($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{mod}{Global.s}mod.json"))
+            if (mod == null || !File.Exists($"{Global.GetCurrentModDirectory()}{Global.s}{mod}{Global.s}mod.json"))
             {
                 DescriptionWindow.Document = defaultFlow;
                 var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
@@ -2396,7 +2453,7 @@ namespace Striverum
             else
             {
                 FlowDocument descFlow = new FlowDocument();
-                var metadataString = File.ReadAllText($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{mod}{Global.s}mod.json");
+                var metadataString = File.ReadAllText($"{Global.GetCurrentModDirectory()}{Global.s}{mod}{Global.s}mod.json");
                 Metadata metadata = JsonSerializer.Deserialize<Metadata>(metadataString);
 
                 var para = new Paragraph();
@@ -3913,7 +3970,7 @@ namespace Striverum
                 Global.LoadoutItems = new ObservableCollection<String>(Global.config.Configs[Global.config.CurrentGame].Loadouts.Keys);
                 LoadoutsBox.ItemsSource = Global.LoadoutItems;
                 LoadoutsBox.SelectedItem = Global.config.Configs[Global.config.CurrentGame].CurrentLoadout;
-                var currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+                var currentModDirectory = Global.GetCurrentModDirectory();
                 Directory.CreateDirectory(currentModDirectory);
                 ModsWatcher.Path = currentModDirectory;
                 Global.logger.WriteLine($"Game switched to {Global.config.CurrentGame}", LoggerType.Info);
@@ -3958,7 +4015,7 @@ namespace Striverum
                 LauncherOptionsBox.IsEnabled = false;
                 App.Current.Dispatcher.Invoke(() =>
                 {
-                    ModUpdater.CheckForUpdates($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", this);
+                    ModUpdater.CheckForUpdates(Global.GetCurrentModDirectory(), this);
                 });
                 handle = false;
             }
