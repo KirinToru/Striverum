@@ -36,7 +36,7 @@ namespace Striverum
         public static async Task<bool> CheckForStriverumUpdate(CancellationTokenSource cancellationToken)
         {
             // Get Version Number
-            var localVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
+            var localVersion = FileVersionInfo.GetVersionInfo(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Striverum.exe")).FileVersion;
             try
             {
                 var requestUrl = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";

@@ -6,78 +6,152 @@
         xmlns:local="clr-namespace:Striverum.UI"
         xmlns:fa5="http://schemas.fontawesome.com/icons/"
         mc:Ignorable="d"
-        Title="Striverum" WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize" MinWidth="600"
-        Background="#202020" ShowActivated="True" Closing="Window_Closing" SizeToContent="WidthAndHeight">
+        Title="Select Download - Striverum" WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize" Width="640" MaxHeight="700"
+        Background="#181818" ShowActivated="True" SizeToContent="Height">
     <Window.Resources>
         <DataTemplate x:Key="FileTemplate">
-            <Button Click="SelectButton_Click"  Margin="5" HorizontalContentAlignment="Stretch" Background="#494949">
-                <Button.Resources>
-                    <Style TargetType="{x:Type Border}">
-                        <Setter Property="CornerRadius" Value="2"/>
-                    </Style>
-                </Button.Resources>
-                <Grid VerticalAlignment="Center" x:Name="GridItem" Margin="3">
+            <Border Background="#222222" BorderBrush="#333333" BorderThickness="1" CornerRadius="8" Margin="0,0,0,8" Padding="12,10">
+                <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" FontSize="18" FontWeight="Bold" Foreground="#f2f2f2" Text="{Binding Path=FileName}"/>
-                    <TextBlock Grid.Row="1" FontSize="13" Foreground="#a2a2a2">
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0} • Uploaded {1} • {2} downloads">
-                                <Binding Path="ConvertedFileSize"/>
-                                <Binding Path="TimeSinceUpload"/>
-                                <Binding Path="DownloadString"/>
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
-                    <TextBlock Grid.Row="2" FontSize="13" Foreground="#a2a2a2" Text="{Binding Description}"/>
-                    <fa5:ImageAwesome Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Center" Height="15" Icon="Solid_Download" Foreground="#f2f2f2"/>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- File Name -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <fa5:ImageAwesome Icon="Solid_FileArchive" Height="13" Width="13" Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding FileName}" FontSize="13" FontWeight="Bold" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- Download Single File Button -->
+                    <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Height="32" Cursor="Hand" Click="SelectButton_Click" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border x:Name="Bd" Background="#2C2C2C" BorderBrush="#444444" BorderThickness="1" CornerRadius="6" Padding="12,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <fa5:ImageAwesome Icon="Solid_Download" Height="11" Width="11" Foreground="#CCCCCC" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Download" FontSize="12" FontWeight="SemiBold" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#D32F2F"/>
+                                        <Setter Property="Foreground" Value="#FFFFFF"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Badges Row: Size, Upload Date, Downloads -->
+                    <WrapPanel Grid.Row="1" Grid.Column="0" Margin="21,4,0,4">
+                        <!-- Size Badge -->
+                        <Border Background="#1A1A1A" BorderBrush="#383838" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,6,2">
+                            <StackPanel Orientation="Horizontal">
+                                <fa5:ImageAwesome Icon="Solid_Hdd" Height="9" Width="9" Foreground="#888888" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ConvertedFileSize}" FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Uploaded Time Badge -->
+                        <Border Background="#1A1A1A" BorderBrush="#383838" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,6,2">
+                            <StackPanel Orientation="Horizontal">
+                                <fa5:ImageAwesome Icon="Solid_Clock" Height="9" Width="9" Foreground="#888888" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TimeSinceUpload}" FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Downloads Count Badge -->
+                        <Border Background="#1A1A1A" BorderBrush="#383838" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,6,2">
+                            <StackPanel Orientation="Horizontal">
+                                <fa5:ImageAwesome Icon="Solid_Download" Height="9" Width="9" Foreground="#888888" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding DownloadString, StringFormat='{}{0} DLs'}" FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+
+                    <!-- Optional Description -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Description}" FontSize="11" Foreground="#888888" TextWrapping="Wrap" Margin="21,0,0,0"/>
                 </Grid>
-            </Button>
+            </Border>
         </DataTemplate>
     </Window.Resources>
-    <Grid>
+
+    <Grid Margin="20,16,20,20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Subtitle Info -->
+            <RowDefinition Height="*"/>    <!-- File List -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Buttons -->
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Padding="10,2,10,2" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="25" FontWeight="Bold" Name="TitleBox"/>
-        <TextBlock Grid.Row="1" Margin="10,2,10,2" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16" Text="Multiple downloads were found, choose one:"/>
-        <ListView MaxHeight="500" Style="{StaticResource ListviewStyle}" Name="FileList" Grid.Row="2" Background="Transparent" BorderThickness="0" ItemTemplate="{StaticResource FileTemplate}">
-            <ListView.ItemContainerStyle>
-                <Style TargetType="{x:Type ListViewItem}">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Focusable" Value="false"/>
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="{x:Type ListViewItem}">
-                                <ContentPresenter />
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </ListView.ItemContainerStyle>
-        </ListView>
-        <Button Grid.Row="3" HorizontalContentAlignment="Stretch" Margin="5" x:Name="DownloadAllButton" Content=" Download All" FontSize="18" FontWeight="Bold" HorizontalAlignment="Stretch"  VerticalAlignment="Bottom" Height="40"  Background="#494949" Foreground="#f2f2f2" Click="DownloadAll_Click">
-            <Button.Resources>
-                <Style TargetType="{x:Type Border}">
-                    <Setter Property="CornerRadius" Value="2"/>
-                </Style>
-            </Button.Resources>
-        </Button>
-        <Button Grid.Row="4" HorizontalContentAlignment="Stretch" Margin="5" x:Name="CancelButton" Content=" Cancel" FontSize="18" FontWeight="Bold" HorizontalAlignment="Stretch"  VerticalAlignment="Bottom" Height="40"  Background="#494949" Foreground="#f2f2f2" Click="CancelButton_Click">
-            <Button.Resources>
-                <Style TargetType="{x:Type Border}">
-                    <Setter Property="CornerRadius" Value="2"/>
-                </Style>
-            </Button.Resources>
-        </Button>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Margin="0,0,0,12" BorderBrush="#2C2C2C" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <fa5:ImageAwesome Icon="Solid_Boxes" Height="15" Width="15" Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="#F2F2F2" Text="Select Files to Download" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Subtitle Info -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,14">
+            <TextBlock x:Name="TitleBox" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" TextWrapping="Wrap" Margin="0,0,0,3"/>
+            <TextBlock Text="Multiple files are available for this mod. Choose one to install or download all of them." FontSize="12" Foreground="#888888"/>
+        </StackPanel>
+
+        <!-- Scrollable Files List -->
+        <ScrollViewer Grid.Row="2" MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+            <ItemsControl x:Name="FileList" ItemTemplate="{StaticResource FileTemplate}"/>
+        </ScrollViewer>
+
+        <!-- Bottom Action Buttons -->
+        <Grid Grid.Row="3">
+            <Button x:Name="CancelButton" Height="36" HorizontalAlignment="Left" Cursor="Hand" Click="CancelButton_Click" IsCancel="True">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Border" Background="#222222" BorderBrush="#383838" BorderThickness="1" CornerRadius="8" Padding="16,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <fa5:ImageAwesome Icon="Solid_Times" Height="11" Width="11" Foreground="#A0A0A0" Margin="0,0,6,0"/>
+                                <TextBlock Text="Cancel" FontSize="13" FontWeight="SemiBold" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#303030"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Button x:Name="DownloadAllButton" Height="36" HorizontalAlignment="Right" Cursor="Hand" Click="DownloadAll_Click" IsDefault="True">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Border" Background="#D32F2F" BorderThickness="0" CornerRadius="8" Padding="18,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <fa5:ImageAwesome Icon="Solid_CloudDownloadAlt" Height="12" Width="12" Foreground="#FFFFFF" Margin="0,0,6,0"/>
+                                <TextBlock Text="Download All Files" FontSize="13" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E53935"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#B71C1C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
     </Grid>
 </Window>

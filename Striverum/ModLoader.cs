@@ -23,13 +23,6 @@ namespace Striverum
                 // Delete everything in mods folder
                 Directory.Delete(path, true);
                 Directory.CreateDirectory(path);
-                // Delete everything in SZModLib Mods folder
-                if (Global.config.CurrentGame.Equals("Dragon Ball Sparking! ZERO", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    var modLibPath = $"{Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(path)))}{Global.s}Mods";
-                    if (Directory.Exists(modLibPath))
-                        Directory.Delete(modLibPath, true);
-                }
                 // Delete everything in patches folder for Switch games
                 if (!String.IsNullOrEmpty(Global.config.Configs[Global.config.CurrentGame].PatchesFolder))
                 {
@@ -250,9 +243,6 @@ namespace Striverum
         {
             var missing = false;
             Dictionary<string, Entry> entries = null;
-            HashSet<string> db = null;
-            List<string> JsonFiles = null;
-            string prmFilePaths = String.Empty;
             string sig = null;
             var sigs = Directory.GetFiles(Path.GetDirectoryName(path), "*.sig", SearchOption.TopDirectoryOnly);
             if (sigs.Length > 0)
@@ -263,13 +253,7 @@ namespace Striverum
             var LogicModsFolder = $"{Path.GetDirectoryName(path)}{Global.s}LogicMods";
             var Win64Folder = $"{Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(path)))}{Global.s}Binaries{Global.s}Win64";
             var ue4ssModsFolder = $"{Win64Folder}{Global.s}Mods";
-            // SZModLib paths
-            var SZModLibPath = $"{Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(path)))}{Global.s}Mods";
-            var ZSJsonPath = $"{SZModLibPath}{Global.s}ZeroSpark{Global.s}Json";
-            var SZColorPath = $"{SZModLibPath}{Global.s}DBColorZ{Global.s}Colors";
             var ue4ss = false;
-            var DBColorZ = false;
-            var SZModLib = false;
             foreach (var mod in mods)
             {
                 var priorityName = String.Empty;
@@ -278,24 +262,7 @@ namespace Striverum
                 priorityName += folderLetter;
                 var folder = $"{path}{Global.s}{priorityName}{Global.s}{mod.name}";
                 var modPath = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{mod.name}";
-                // If mod contains .uplugin, copy over entire directory as is to SZModLib Mods folder and skip
-                var uplugins = Directory.EnumerateFiles(modPath, "*.uplugin", SearchOption.AllDirectories);
-                List<string> SZMods = null;
-                if (uplugins.Count() > 0)
-                {
-                    SZMods = uplugins.Select(path => Path.GetDirectoryName(path)).ToList();
-                    foreach (var SZMod in SZMods)
-                    {
-                        Directory.CreateDirectory(SZModLibPath);
-                        Global.logger.WriteLine($"Adding SZModLib Mod: {Path.GetFileName(SZMod)}", LoggerType.Info);
-                        CopyDirectoryWithRename(SZMod, $"{SZModLibPath}{Global.s}{Path.GetFileName(SZMod)}");
-                        SZModLib = true;
-                    }
-                }
                 var paks = mod.paks;
-                // Ignore paks in SZModLib mods
-                if (SZMods != null)
-                    paks = paks.Where(x => !SZMods.Any(filter => x.Key.Contains(filter, StringComparison.OrdinalIgnoreCase))).ToDictionary(kv => kv.Key, kv => kv.Value);
                 // Copy over .paks and .sigs to ~mods folder in order
                 if (CopyFolder(paks, modPath, folder, sig) > 0)
                 {
@@ -330,34 +297,12 @@ namespace Striverum
                         ue4ss = true;
                     }
                 var files = Directory.GetFiles(modPath, "*", SearchOption.AllDirectories);
-                // Ignore files in SZModLib mods
-                if (SZMods != null)
-                    files = files.Where(x => !SZMods.Any(filter => x.Contains(filter, StringComparison.OrdinalIgnoreCase))).ToArray();
                 foreach (var file in files)
                 {
                     var ext = Path.GetExtension(file).ToLowerInvariant();
                     switch (ext)
                     {
-                        case ".txt":
-                            if (Path.GetFileName(file).Equals("dblist.txt", StringComparison.InvariantCultureIgnoreCase) &&
-                                Global.config.CurrentGame.Equals("My Hero One's Justice 2", StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                var dblistFile = $"{Global.assemblyLocation}{Global.s}Resources{Global.s}My Hero One's Justice 2{Global.s}HeroGame{Global.s}Content{Global.s}DB{Global.s}dblist.txt";
-                                if (missing)
-                                    continue;
-                                if (db == null && TextPatcher.ExtractBaseFiles("HeroGame-WindowsNoEditor_0_P.pak", "*dblist.txt",
-                                    $"HeroGame{Global.s}Content{Global.s}DB{Global.s}dblist.txt"))
-                                    db = File.ReadAllLines(dblistFile).ToHashSet();
-                                // Check if db is still null
-                                if (db == null)
-                                {
-                                    missing = true;
-                                    continue;
-                                }
-                                Global.logger.WriteLine($"Appending dblist.txt from {mod.name}...", LoggerType.Info);
-                                db.UnionWith(File.ReadAllLines(file));
-                            }
-                            break;
+
                         case ".usm":
                         case ".uasset":
                         case ".mp4":
@@ -382,74 +327,41 @@ namespace Striverum
                             if (Path.GetFileName(file).Equals("mod.json", StringComparison.InvariantCultureIgnoreCase))
                                 break;
                             // Text patching json
-                            if (Path.GetFileName(file).Equals("text.json", StringComparison.InvariantCultureIgnoreCase) &&
-                                    (Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase)
-                                    || Global.config.CurrentGame.Equals("Guilty Gear -Strive-", StringComparison.InvariantCultureIgnoreCase)
-                                    || Global.config.CurrentGame.Equals("Granblue Fantasy Versus", StringComparison.InvariantCultureIgnoreCase)
-                                    || Global.config.CurrentGame.Equals("Granblue Fantasy Versus Rising", StringComparison.InvariantCultureIgnoreCase)
-                                    || Global.config.CurrentGame.Equals("DNF Duel", StringComparison.InvariantCultureIgnoreCase)))
+                            if (Path.GetFileName(file).Equals("text.json", StringComparison.InvariantCultureIgnoreCase))
                             {
-                                    if (missing)
-                                        continue;
-                                    var pakName = Global.config.CurrentGame.Equals("DNF Duel", StringComparison.InvariantCultureIgnoreCase) ? "RED-WindowsNoEditor.pak" : "pakchunk0-WindowsNoEditor.pak";
-                                    if (entries == null && TextPatcher.ExtractBaseFiles(pakName, "RED/Content/Localization/INT/REDGame",
-                                            $"RED{Global.s}Content{Global.s}Localization{Global.s}INT{Global.s}REDGame.uexp"))
-                                            entries = TextPatcher.GetEntries();
-                                    // Check if entries are still null
-                                    if (entries == null)
-                                    {
-                                        missing = true;
-                                        continue;
-                                    }
-                                    
-                                    var text = File.ReadAllText(file);
-                                    TextEntries replacements;
-                                    try
-                                    {
-                                        replacements = JsonSerializer.Deserialize<TextEntries>(text);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Global.logger.WriteLine(e.Message, LoggerType.Error);
-                                        continue;
-                                    }
-                                    foreach (var replacement in replacements.Entries)
-                                    {
-                                        entries = TextPatcher.ReplaceEntry(replacement, entries);
-                                    }
+                                if (missing)
+                                    continue;
+                                var pakName = "pakchunk0-WindowsNoEditor.pak";
+                                if (entries == null && TextPatcher.ExtractBaseFiles(pakName, "RED/Content/Localization/INT/REDGame",
+                                        $"RED{Global.s}Content{Global.s}Localization{Global.s}INT{Global.s}REDGame.uexp"))
+                                        entries = TextPatcher.GetEntries();
+                                // Check if entries are still null
+                                if (entries == null)
+                                {
+                                    missing = true;
+                                    continue;
+                                }
+                                
+                                var text = File.ReadAllText(file);
+                                TextEntries replacements;
+                                try
+                                {
+                                    replacements = JsonSerializer.Deserialize<TextEntries>(text);
+                                }
+                                catch (Exception e)
+                                {
+                                    Global.logger.WriteLine(e.Message, LoggerType.Error);
+                                    continue;
+                                }
+                                foreach (var replacement in replacements.Entries)
+                                {
+                                    entries = TextPatcher.ReplaceEntry(replacement, entries);
+                                }
                                 break;
-                            }
-                            // SZModLib json mods
-                            if (Global.config.CurrentGame.Equals("Dragon Ball Sparking! ZERO", StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
-                                // ZeroSpark json mods has field ZeroSparkVersion
-                                if (document.RootElement.TryGetProperty("ZeroSparkVersion", out _))
-                                {
-                                    Global.logger.WriteLine($"Adding ZeroSpark JSON: {Path.GetFileName(file)}", LoggerType.Info);
-                                    Directory.CreateDirectory(ZSJsonPath);
-                                    File.Copy(file, $"{ZSJsonPath}{Global.s}{Path.GetFileName(file)}", true);
-                                    if (JsonFiles == null)
-                                        JsonFiles = new();
-                                    JsonFiles.Add(Path.GetFileNameWithoutExtension(file));
-                                }
-                                // DBColorZ json mods has field presetName
-                                else if (document.RootElement.TryGetProperty("presetName", out _))
-                                {
-                                    Directory.CreateDirectory(SZColorPath);
-                                    var colorOutputPath = GetUniqueColorFileName($"{SZColorPath}{Global.s}{Path.GetFileName(file)}");
-                                    Global.logger.WriteLine($"Adding DBColorZ JSON: {Path.GetFileName(colorOutputPath)}", LoggerType.Info);
-                                    File.Copy(file, colorOutputPath, true);
-                                    DBColorZ = true;
-                                }
                             }
                             break;
                     }
                 }
-                // Check for prm_files folder for JUMP FORCE slots
-                if (Global.config.CurrentGame.Equals("Jump Force", StringComparison.InvariantCultureIgnoreCase))
-                    foreach (var prm in Directory.GetDirectories(modPath, "*prm_files", SearchOption.AllDirectories))
-                        prmFilePaths += $@"""{prm}"" ";
             }
             // Check if UE4SS is installed if UE4SS mod is used
             if (ue4ss)
@@ -497,98 +409,6 @@ namespace Striverum
                 PakFiles("RED", folder, sig);
                 // Delete loose files
                 Directory.Delete($"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak{Global.s}RED", true);
-            }
-            // Create pak if dblist is found for MHOJ2
-            if (db != null)
-            {
-                var dbOutput = $"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak{Global.s}HeroGame{Global.s}Content{Global.s}DB{Global.s}dblist.txt";
-                Directory.CreateDirectory(Path.GetDirectoryName(dbOutput));
-                File.WriteAllLines(dbOutput, db);
-
-                var priorityName = String.Empty;
-                foreach (var tilde in Enumerable.Range(0, tildes))
-                    priorityName += "~";
-                priorityName += folderLetter;
-                var folder = $"{path}{Global.s}{priorityName}";
-                Directory.CreateDirectory(folder);
-                PakFiles("HeroGame", folder, sig);
-                Directory.Delete($"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak{Global.s}HeroGame", true);
-            }
-            // Check if SZModLib dependency exists if needed
-            if (SZModLib)
-                if (!File.Exists($"{SZModLibPath}{Global.s}SZModLib{Global.s}SZModLib.uplugin"))
-                    Global.logger.WriteLine($"SZModLib dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
-            // Check if DBColorZ dependency exists if needed
-            if (DBColorZ)
-                if (!File.Exists($"{SZModLibPath}{Global.s}DBColorZ{Global.s}DBColorZ.uplugin"))
-                    Global.logger.WriteLine($"DBColorZ dependency not found, please make sure to install \"DBColorZ: The Sparking Zero Color Customizer\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
-            // Add Striverum field to JsonFiles.json
-            if (JsonFiles != null)
-            {
-                if (!File.Exists($"{ZSJsonPath}{Global.s}JsonFiles.json"))
-                    Global.logger.WriteLine($"ZeroSpark dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
-                else
-                {
-                    JsonNode jsonObject = JsonNode.Parse(File.ReadAllText($"{ZSJsonPath}{Global.s}JsonFiles.json"));
-                    if (jsonObject != null)
-                    {
-                        var jsonArray = new JsonArray();
-                        foreach (var JsonFile in JsonFiles)
-                            jsonArray.Add(JsonFile);
-                        jsonObject["Striverum"] = jsonArray;
-                        string updatedJson = jsonObject.ToJsonString();
-                        File.WriteAllText($"{ZSJsonPath}{Global.s}JsonFiles.json", updatedJson);
-                    }
-                }
-            }
-            // Costume Patched placeholder files as lowest priority
-            if (patched != null && (bool)patched && Global.config.CurrentGame != "Scarlet Nexus" && Global.config.CurrentGame != "Dragon Ball Sparking! ZERO")
-            {
-                var baseFolder = $"{path}{Global.s}--Base--";
-                using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Striverum.Resources.Patches.{Global.config.CurrentGame.Replace(" ", "_").Replace("-", "_")}.Placeholder.--PlaceholderCostumes.pak"))
-                {
-                    Directory.CreateDirectory(baseFolder);
-                    using (var stream = new FileStream($"{baseFolder}{Global.s}--PlaceholderCostumes.pak", FileMode.Create, FileAccess.Write))
-                    {
-                        resource.CopyTo(stream);
-                    }
-                }
-                if (sig != null)
-                {
-                    var newSig = $"{baseFolder}{Global.s}--PlaceholderCostumes.sig";
-                    // Copy over original game's .sig
-                    if (File.Exists(sig))
-                        File.Copy(sig, newSig, true);
-                    else
-                        Global.logger.WriteLine($"Couldn't find .sig file to go with {baseFolder}{Global.s}--PlaceholderCostumes.pak", LoggerType.Warning);
-                }
-                Global.logger.WriteLine($"Copied over base costume patch files", LoggerType.Info);
-            }
-            if (!String.IsNullOrEmpty(prmFilePaths))
-            {
-                Global.logger.WriteLine($"Adding slots...", LoggerType.Info);
-                ProcessStartInfo startInfo = new ProcessStartInfo();
-                startInfo.CreateNoWindow = true;
-                startInfo.UseShellExecute = false;
-                startInfo.FileName = $"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}jfaddslots{Global.s}JFAddSlots.exe";
-                startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                startInfo.WorkingDirectory = $"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}jfaddslots";
-                startInfo.Arguments = $@"""{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak"" {prmFilePaths}";
-                using (Process process = new Process())
-                {
-                    process.StartInfo = startInfo;
-                    process.Start();
-                    process.WaitForExit();
-                }
-                var priorityName = String.Empty;
-                foreach (var tilde in Enumerable.Range(0, tildes))
-                    priorityName += "~";
-                priorityName += folderLetter;
-                var folder = $"{path}{Global.s}{priorityName}";
-                Directory.CreateDirectory(folder);
-                PakFiles("JUMP_FORCE", folder, sig);
-                Directory.Delete($"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak{Global.s}JUMP_FORCE", true);
-                Global.logger.WriteLine($"Slots added!", LoggerType.Info);
             }
             Global.logger.WriteLine("Finished building!", LoggerType.Info);
         }

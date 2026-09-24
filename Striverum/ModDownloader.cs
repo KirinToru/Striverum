@@ -194,18 +194,7 @@ namespace Striverum
         {
             await Task.Run(() =>
             {
-                switch (game)
-                {
-                    case "Demon Slayer The Hinokami Chronicles":
-                        game = "Demon Slayer";
-                        break;
-                    case "THE IDOLM@STER STARLIT SEASON":
-                        game = "IDOLM@STER";
-                        break;
-                    case "Dragon Ball: Sparking! ZERO":
-                        game = "Dragon Ball Sparking! ZERO";
-                        break;
-                }
+                game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
                 string ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
@@ -257,6 +246,7 @@ namespace Striverum
                         if (!File.Exists($@"{ArchiveDestination}{Global.s}mod.json"))
                         {
                             Metadata metadata = new Metadata();
+                            metadata.name = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()));
                             metadata.submitter = record.Owner.Name;
                             metadata.description = record.Description;
                             metadata.filedescription = fileDescription;
@@ -317,15 +307,7 @@ namespace Striverum
         {
             await Task.Run(() =>
             {
-                switch (game)
-                {
-                    case "Demon Slayer The Hinokami Chronicles":
-                        game = "Demon Slayer";
-                        break;
-                    case "THE IDOLM@STER STARLIT SEASON":
-                        game = "IDOLM@STER";
-                        break;
-                }
+                game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
                 string ArchiveDestination = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{game}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
@@ -377,6 +359,7 @@ namespace Striverum
                         if (!File.Exists($@"{ArchiveDestination}{Global.s}mod.json"))
                         {
                             Metadata metadata = new Metadata();
+                            metadata.name = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()));
                             metadata.submitter = record.Owner.Name;
                             metadata.description = record.Description;
                             metadata.filedescription = fileDescription;

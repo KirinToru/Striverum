@@ -15,15 +15,14 @@ namespace Striverum
         public static Config config;
         public static Logger logger;
         public static char s = Path.DirectorySeparatorChar;
-        public static string assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        public static string assemblyLocation = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         public static List<string> games;
         public static ObservableCollection<String> LoadoutItems;
         public static ObservableCollection<Mod> ModList;
         public static void UpdateConfig()
         {
             if (config == null) return;
-            if (string.IsNullOrEmpty(config.CurrentGame))
-                config.CurrentGame = "Guilty Gear -Strive-";
+            config.CurrentGame = "Guilty Gear -Strive-";
 
             if (config.Configs == null)
             {

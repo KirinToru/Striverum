@@ -64,6 +64,7 @@ namespace Striverum
     }
     public class Metadata
     {
+        public string name { get; set; }
         public Uri preview { get; set; }
         public string submitter { get; set; }
         public Uri avi { get; set; }
@@ -79,7 +80,11 @@ namespace Striverum
     }
     public class Config
     {
-        public string CurrentGame { get; set; }
+        public string CurrentGame
+        {
+            get => "Guilty Gear -Strive-";
+            set { }
+        }
         public Dictionary<string, GameConfig> Configs { get; set; }
         public double? LeftGridWidth { get; set; }
         public double? RightGridWidth { get; set; }

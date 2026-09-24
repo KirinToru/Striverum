@@ -6,65 +6,102 @@
         xmlns:local="clr-namespace:Striverum.UI"
         xmlns:fa5="http://schemas.fontawesome.com/icons/"
         mc:Ignorable="d"
-        Title="Striverum" WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize" MinWidth="600" MaxWidth="750"
-        Background="#202020" ShowActivated="True" Closing="Window_Closing" SizeToContent="WidthAndHeight">
+        Title="Alternate Download Mirrors - Striverum" WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize" Width="640" MaxHeight="720"
+        Background="#181818" ShowActivated="True" SizeToContent="Height">
     <Window.Resources>
         <DataTemplate x:Key="FileTemplate">
-            <Button Click="SelectButton_Click"  Margin="5" HorizontalContentAlignment="Stretch" Background="#494949">
-                <Button.Resources>
-                    <Style TargetType="{x:Type Border}">
-                        <Setter Property="CornerRadius" Value="14"/>
-                    </Style>
-                </Button.Resources>
-                <Grid VerticalAlignment="Center" x:Name="GridItem" Margin="3">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" FontSize="18" FontWeight="Bold" Foreground="#f2f2f2" Text="{Binding Path=Description}"/>
-                    <TextBlock Grid.Row="1" FontSize="13" TextWrapping="WrapWithOverflow" Foreground="#a2a2a2" Text="{Binding Path=Url}"/>
-                </Grid>
-            </Button>
-            </DataTemplate>
-    </Window.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Padding="10,2,10,2" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="25" FontWeight="Bold" TextWrapping="Wrap" Name="TitleBox"/>
-        <TextBlock Name="Description" Grid.Row="1" TextWrapping="Wrap" Margin="10,2,10,2" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16"/>
-        <TextBox BorderThickness="0" IsReadOnly="True" Name="PathText" Grid.Row="2" TextWrapping="WrapWithOverflow" FontWeight="Bold" Margin="8,0,8,0" TextAlignment="Left" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16"/>
-        <TextBlock Name="FetchDescription" Grid.Row="3" TextWrapping="Wrap" Margin="10,2,10,2" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16"/>
-        <TextBox BorderThickness="0" IsReadOnly="True" Name="UrlText" Grid.Row="4" TextWrapping="WrapWithOverflow" FontWeight="Bold" Margin="8,0,8,0" TextAlignment="Left" Background="Transparent" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="16"/>
-        <ListView MaxHeight="500" Style="{StaticResource ListviewStyle}" Name="FileList" Grid.Row="5" Background="Transparent" BorderThickness="0" ItemTemplate="{StaticResource FileTemplate}">
-            <ListView.ItemContainerStyle>
-                <Style TargetType="{x:Type ListViewItem}">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Focusable" Value="false"/>
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="{x:Type ListViewItem}">
-                                <ContentPresenter />
+            <Border Background="#222222" BorderBrush="#333333" BorderThickness="1" CornerRadius="8" Margin="0,0,0,8" Padding="12,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <fa5:ImageAwesome Icon="Solid_ExternalLinkAlt" Height="12" Width="12" Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Description}" FontSize="13" FontWeight="Bold" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Url}" FontSize="11" Foreground="#888888" TextTrimming="CharacterEllipsis" Margin="20,0,0,0"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Height="32" Cursor="Hand" Click="SelectButton_Click" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border x:Name="Bd" Background="#2C2C2C" BorderBrush="#444444" BorderThickness="1" CornerRadius="6" Padding="12,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <fa5:ImageAwesome Icon="Solid_ExternalLinkAlt" Height="11" Width="11" Foreground="#CCCCCC" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Open Link" FontSize="12" FontWeight="SemiBold" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#D32F2F"/>
+                                        <Setter Property="Foreground" Value="#FFFFFF"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
                             </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </ListView.ItemContainerStyle>
-        </ListView>
-        <Button Grid.Row="6" HorizontalContentAlignment="Stretch" Margin="5" Name="CancelButton" Content=" Cancel" FontSize="18" FontWeight="Bold" HorizontalAlignment="Stretch"  VerticalAlignment="Bottom" Height="40"  Background="#494949" Foreground="#f2f2f2" Click="CancelButton_Click">
-            <Button.Resources>
-                <Style TargetType="{x:Type Border}">
-                    <Setter Property="CornerRadius" Value="14"/>
-                </Style>
-            </Button.Resources>
-        </Button>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="20,16,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Mod Title & Instructions -->
+            <RowDefinition Height="*"/>    <!-- Mirror List -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Margin="0,0,0,12" BorderBrush="#2C2C2C" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <fa5:ImageAwesome Icon="Solid_ExternalLinkAlt" Height="15" Width="15" Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="#F2F2F2" Text="Alternate Download Mirrors" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Instructions Card -->
+        <Border Grid.Row="1" Background="#202020" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock x:Name="TitleBox" FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                <TextBlock x:Name="Description" FontSize="12" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                <TextBox x:Name="PathText" IsReadOnly="True" Background="#161616" Foreground="#E0E0E0" BorderBrush="#333333" BorderThickness="1" Padding="6,4" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                <TextBlock x:Name="FetchDescription" FontSize="11" Foreground="#888888" TextWrapping="Wrap" Margin="0,0,0,3"/>
+                <TextBox x:Name="UrlText" IsReadOnly="True" Background="#161616" Foreground="#888888" BorderBrush="#2A2A2A" BorderThickness="1" Padding="6,3" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Mirror List -->
+        <ScrollViewer Grid.Row="2" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+            <ItemsControl x:Name="FileList" ItemTemplate="{StaticResource FileTemplate}"/>
+        </ScrollViewer>
+
+        <!-- Bottom Action Buttons -->
+        <Grid Grid.Row="3">
+            <Button x:Name="CancelButton" Height="36" HorizontalAlignment="Right" Cursor="Hand" Click="CancelButton_Click" IsCancel="True">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Border" Background="#222222" BorderBrush="#383838" BorderThickness="1" CornerRadius="8" Padding="18,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <fa5:ImageAwesome Icon="Solid_Times" Height="11" Width="11" Foreground="#A0A0A0" Margin="0,0,6,0"/>
+                                <TextBlock Text="Close" FontSize="13" FontWeight="SemiBold" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#303030"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
     </Grid>
 </Window>

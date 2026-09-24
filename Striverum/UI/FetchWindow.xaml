@@ -3,27 +3,127 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Striverum" FocusManager.FocusedElement="{Binding ElementName=UrlBox}"
-        mc:Ignorable="d" Background="#202020" Title="Fetch Metadata" WindowStartupLocation="CenterScreen"
-        Height="120" Width="500" MinHeight="120" MinWidth="500">
-    <Grid>
+        xmlns:local="clr-namespace:Striverum"
+        xmlns:fa5="http://schemas.fontawesome.com/icons/"
+        FocusManager.FocusedElement="{Binding ElementName=UrlBox}"
+        mc:Ignorable="d" Background="#181818" Title="Fetch Metadata" WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize" Width="520" SizeToContent="Height">
+    <Window.Resources>
+        <Style x:Key="ModernTextBoxStyle" TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="BorderBrush" Value="#383838"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="CaretBrush" Value="#F2F2F2"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#D32F2F"/>
+                                <Setter TargetName="Border" Property="Background" Value="#262626"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18,16,18,18">
         <Grid.RowDefinitions>
-            <RowDefinition/>
-            <RowDefinition Height="0.7*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="110"/>
-            <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
-        <TextBlock Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold" >GameBanana URL</TextBlock>
-        <TextBox Name="UrlBox" Height="20" Margin="0,0,15,0" Background="#303030" BorderBrush="#353535" Foreground="#f2f2f2" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" KeyDown="UrlBox_KeyDown"/>
-        <Grid Grid.Row="1" Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition/>
-                <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
-            <Button Name="ConfirmButton" Click="ConfirmButton_Click" Background="#494949" Foreground="#f2f2f2" Margin="110,0,30,10" Content="Confirm"/>
-            <Button Name="CancelButton" Click="CancelButton_Click" Background="#494949" Foreground="#f2f2f2" Margin="30,0,110,10" Grid.Column="1" Content="Cancel"/>
-        </Grid>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Margin="0,0,0,16" BorderBrush="#2C2C2C" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <fa5:ImageAwesome Icon="Solid_CloudDownloadAlt" Height="16" Width="16" Foreground="#D32F2F" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock FontSize="15" FontWeight="Bold" Foreground="#F2F2F2" Text="Fetch Metadata from GameBanana" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Mod Target Info -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,14">
+            <TextBlock Text="Target Mod" FontSize="11" FontWeight="SemiBold" Foreground="#888888" Margin="1,0,0,2"/>
+            <TextBlock x:Name="ModNameBlock" FontSize="13" FontWeight="Bold" Foreground="#F2F2F2" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- URL Input -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="GameBanana Mod URL" FontSize="12" FontWeight="SemiBold" Foreground="#CCCCCC" Margin="1,0,0,6"/>
+            <TextBox Name="UrlBox" Style="{StaticResource ModernTextBoxStyle}" KeyDown="UrlBox_KeyDown"/>
+            <TextBlock Text="Format: https://gamebanana.com/mods/12345 or https://gamebanana.com/sounds/12345" FontSize="11" Foreground="#666666" Margin="2,4,0,0"/>
+        </StackPanel>
+
+        <!-- Status Message -->
+        <TextBlock x:Name="StatusBlock" Grid.Row="3" Margin="1,0,0,12" FontSize="12" Foreground="#EF5350" TextWrapping="Wrap" Visibility="Collapsed"/>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Name="CancelButton" Height="34" Margin="0,0,8,0" Cursor="Hand" Click="CancelButton_Click" IsCancel="True">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Border" Background="#222222" BorderBrush="#383838" BorderThickness="1" CornerRadius="8" Padding="14,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <fa5:ImageAwesome Icon="Solid_Times" Height="11" Width="11" Foreground="#A0A0A0" Margin="0,0,6,0"/>
+                                <TextBlock Text="Cancel" FontSize="13" FontWeight="SemiBold" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#333333"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#1A1A1A"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#2C2C2C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Name="ConfirmButton" Height="34" Cursor="Hand" Click="ConfirmButton_Click" IsDefault="True">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Border" Background="#D32F2F" BorderThickness="0" CornerRadius="8" Padding="16,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <fa5:ImageAwesome x:Name="BtnIcon" Icon="Solid_Download" Height="11" Width="11" Foreground="#FFFFFF" Margin="0,0,6,0"/>
+                                <TextBlock x:Name="BtnText" Text="Fetch &amp; Save" FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E53935"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#B71C1C"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
     </Grid>
 </Window>

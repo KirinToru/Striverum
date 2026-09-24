@@ -101,6 +101,102 @@
             </Setter>
         </Style>
 
+        <!-- Context Menu Styles with Smooth Fade/Slide Animation -->
+        <Style x:Key="ModernModContextMenu" TargetType="{x:Type ContextMenu}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ContextMenu}">
+                        <Border x:Name="ContextMenuBorder"
+                                Background="#202020"
+                                BorderBrush="#383838"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="4"
+                                Opacity="0"
+                                RenderTransformOrigin="0.5,0">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="MenuTranslate" Y="-6"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.6" Color="#000000"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="ContextMenu.Opened">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ContextMenuBorder"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0" To="1" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="MenuTranslate"
+                                                         Storyboard.TargetProperty="Y"
+                                                         From="-6" To="0" Duration="0:0:0.12">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernContextMenuItem" TargetType="{x:Type MenuItem}">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="5" Padding="8,4" Margin="2,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Icon"
+                                                  VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                  VerticalAlignment="Center" Margin="6,0,12,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#323232"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ItemBorder" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernContextMenuSeparator" TargetType="{x:Type Separator}">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Background" Value="#2F2F2F"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Separator}">
+                        <Border Background="{TemplateBinding Background}" Height="1"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Compact Rounded ComboBox Style -->
         <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
             <Border x:Name="Border" CornerRadius="14" Background="{TemplateBinding Background}"
@@ -738,94 +834,10 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <ComboBox Name="GameBox" Width="0" Height="0" Margin="0" Visibility="Collapsed" SelectionChanged="GameBox_SelectionChanged" DropDownClosed="GameBox_DropDownClosed">
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/dbfz.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Dragon Ball FighterZ" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/DBSZ.jpg" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Dragon Ball Sparking! ZERO" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/mhoj2.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="My Hero One's Justice 2" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/gbvs.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Granblue Fantasy: Versus" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/GBVSR.jpg" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Granblue Fantasy Versus: Rising" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
                             <ComboBoxItem IsSelected="True">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Image Source="../Assets/Icons/ggs.png" Width="27" Margin="4,0,10,0"/>
                                     <TextBlock Text="Guilty Gear -Strive-" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/jf.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Jump Force" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/kh3.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Kingdom Hearts III" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/sn.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Scarlet Nexus" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/toa.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Tales of Arise" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/ds.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Demon Slayer" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/im.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="IDOLM@STER" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/smtv.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="Shin Megami Tensei V" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/KOFXV.jpg" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="The King of Fighters XV" VerticalAlignment="Center" FontWeight="Medium"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image Source="../Assets/Icons/dnf.png" Width="27" Margin="4,0,10,0"/>
-                                    <TextBlock Text="DNF Duel" VerticalAlignment="Center" FontWeight="Medium"/>
                                 </StackPanel>
                             </ComboBoxItem>
                         </ComboBox>
@@ -1020,9 +1032,47 @@
                             <ListBox Grid.Column="1" x:Name="ModListView" Background="#181818" BorderThickness="0"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0"
                                      HorizontalContentAlignment="Stretch"
-                                     SelectionChanged="ModGrid_SelectionChanged">
+                                     SelectionChanged="ModGrid_SelectionChanged"
+                                     ContextMenuOpening="ModListView_ContextMenuOpening">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu Style="{StaticResource ModernModContextMenu}">
+                                        <MenuItem Header="Edit Tags" Click="EditTags_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_Tags" Foreground="#D32F2F" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Rename Mod" Click="EditItem_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_Edit" Foreground="#CCCCCC" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Show in Explorer" Click="OpenItem_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_FolderOpen" Foreground="#CCCCCC" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator Style="{StaticResource ModernContextMenuSeparator}"/>
+                                        <MenuItem Header="Configure Paks" Click="ConfigurePaksItem_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_Cogs" Foreground="#A0A0A0" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Fetch Metadata" Click="FetchItem_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_CloudDownloadAlt" Foreground="#A0A0A0" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator Style="{StaticResource ModernContextMenuSeparator}"/>
+                                        <MenuItem Header="Delete Mod" Click="DeleteItem_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_TrashAlt" Foreground="#EF5350" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
+                                        <EventSetter Event="PreviewMouseRightButtonDown" Handler="ModListItem_PreviewMouseRightButtonDown"/>
                                         <Setter Property="Margin" Value="6,3,6,0"/>
                                         <Setter Property="Padding" Value="10,8"/>
                                         <Setter Property="Background" Value="#242424"/>

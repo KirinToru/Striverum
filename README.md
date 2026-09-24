@@ -1,7 +1,7 @@
 # Striverum Mod Manager
 
 <p align="center">
-  <img src="Unverum/Assets/Striverumpreview.png" alt="Striverum Logo" width="380"/>
+  <img src="Striverum/Assets/Striverumpreview.png" alt="Striverum Logo" width="380"/>
 </p>
 
 **Striverum** is a modern, high-performance mod manager built specifically for **Guilty Gear -Strive-**, forked and reworked from [Unverum](https://github.com/TekkaGB/Unverum) by TekkaGB.
@@ -12,7 +12,7 @@ Striverum reimagines mod management with a laser-focus on Guilty Gear -Strive-, 
 
 ## Key Features & QoL Improvements
 
--**Smart Tagging & Filtering**
+- **Smart Tagging & Filtering**
   - Instant filtering by character, category, author, and sound types.
   - Interactive tag bubbles directly on mod cards - click any character or sound tag to instantly isolate matching mods.
 
@@ -44,7 +44,7 @@ Striverum reimagines mod management with a laser-focus on Guilty Gear -Strive-, 
 
 ### Prerequisites
 - Windows 10/11 (64-bit)
-- [.NET 6.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/6.0)
+- [.NET 6.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/6.0) (Included in build)
 
 ### Installation & Setup
 1. Download the latest release from the [Releases](https://github.com/KirinToru/Striverum/releases) page.

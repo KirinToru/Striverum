@@ -482,6 +482,15 @@ namespace Striverum
             }
             _sections.Add(wips);
 
+            // 8. Unknown (mods not synchronized/installed from GameBanana)
+            var unknown = new SectionItem
+            {
+                Name = "Unknown",
+                IconPath = "",
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_QuestionCircle
+            };
+            _sections.Add(unknown);
+
             // Kick off background GameBanana category synchronization
             _ = Task.Run(SyncCategoriesWithGameBananaAsync);
         }
@@ -829,7 +838,7 @@ namespace Striverum
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 string modSection = mod.cat;
-                if (string.IsNullOrEmpty(modSection) && mod.tags != null)
+                if ((string.IsNullOrEmpty(modSection) || (mod.tags != null && !mod.tags.Any(t => CategoryMatches(t, modSection)))) && mod.tags != null)
                 {
                     modSection = _sections.FirstOrDefault(s => mod.tags.Any(t => CategoryMatches(t, s.Name)))?.Name;
                 }
@@ -838,6 +847,12 @@ namespace Striverum
                 {
                     if (!sectionsWithActiveCats.Contains(modSection))
                         return true;
+                }
+
+                // Check if any tag on the mod directly matches an active section that has no specific active categories
+                if (mod.tags != null && mod.tags.Any(t => ActiveSections.Any(asSec => CategoryMatches(asSec, t) && !sectionsWithActiveCats.Contains(asSec))))
+                {
+                    return true;
                 }
             }
 
@@ -859,7 +874,21 @@ namespace Striverum
             if (isCurrentlyActive)
             {
                 // Toggle OFF
-                if (isActiveCategory)
+                if (isActiveSection)
+                {
+                    ActiveSections.RemoveWhere(s => CategoryMatches(s, tagName));
+                    var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
+                    if (sec != null)
+                    {
+                        sec.IsActive = false;
+                        foreach (var c in sec.Categories)
+                        {
+                            c.IsActive = false;
+                            ActiveCategories.RemoveWhere(ac => CategoryMatches(ac, c.Name));
+                        }
+                    }
+                }
+                else if (isActiveCategory)
                 {
                     ActiveCategories.RemoveWhere(c => CategoryMatches(c, tagName));
                     foreach (var s in _sections)
@@ -878,51 +907,36 @@ namespace Striverum
                         ActiveSections.RemoveWhere(s => CategoryMatches(s, parentSec.Name));
                     }
                 }
-
-                if (isActiveSection)
-                {
-                    ActiveSections.RemoveWhere(s => CategoryMatches(s, tagName));
-                    var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
-                    if (sec != null)
-                    {
-                        sec.IsActive = false;
-                        foreach (var c in sec.Categories)
-                        {
-                            c.IsActive = false;
-                            ActiveCategories.RemoveWhere(ac => CategoryMatches(ac, c.Name));
-                        }
-                    }
-                }
             }
             else
             {
                 // Toggle ON
-                var parentSection = _sections.FirstOrDefault(s => s.Categories.Any(c => CategoryMatches(c.Name, tagName)));
-                if (parentSection != null)
+                // First check if tag matches a section directly (e.g. "Skins", "Unknown", "GUIs", "Gameplay", etc.)
+                var directSection = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
+                if (directSection != null)
                 {
-                    var cat = parentSection.Categories.FirstOrDefault(c => CategoryMatches(c.Name, tagName));
-                    if (cat != null) cat.IsActive = true;
-                    parentSection.IsActive = true;
-                    ActiveCategories.Add(cat != null ? cat.Name : tagName);
-                    ActiveSections.Add(parentSection.Name);
-
-                    // Switch sidebar to category view for this section
-                    if (CategoryPanel.Visibility != Visibility.Visible || _currentSection != parentSection)
+                    directSection.IsActive = true;
+                    ActiveSections.Add(directSection.Name);
+                    if (directSection.Categories.Count > 0 && (CategoryPanel.Visibility != Visibility.Visible || _currentSection != directSection))
                     {
-                        AnimateToCategories(parentSection);
+                        AnimateToCategories(directSection);
                     }
                 }
                 else
                 {
-                    // Tag is a section name
-                    var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
-                    if (sec != null)
+                    var parentSection = _sections.FirstOrDefault(s => s.Categories.Any(c => CategoryMatches(c.Name, tagName)));
+                    if (parentSection != null)
                     {
-                        sec.IsActive = true;
-                        ActiveSections.Add(sec.Name);
-                        if (sec.Categories.Count > 0 && (CategoryPanel.Visibility != Visibility.Visible || _currentSection != sec))
+                        var cat = parentSection.Categories.FirstOrDefault(c => CategoryMatches(c.Name, tagName));
+                        if (cat != null) cat.IsActive = true;
+                        parentSection.IsActive = true;
+                        ActiveCategories.Add(cat != null ? cat.Name : tagName);
+                        ActiveSections.Add(parentSection.Name);
+
+                        // Switch sidebar to category view for this section
+                        if (CategoryPanel.Visibility != Visibility.Visible || _currentSection != parentSection)
                         {
-                            AnimateToCategories(sec);
+                            AnimateToCategories(parentSection);
                         }
                     }
                     else
@@ -1154,7 +1168,8 @@ namespace Striverum
                 if (mod.TagItems == null) continue;
                 foreach (var tag in mod.TagItems)
                 {
-                    tag.IsActive = ActiveCategories.Contains(tag.Name) || ActiveSections.Contains(tag.Name);
+                    tag.IsActive = ActiveCategories.Any(ac => CategoryMatches(ac, tag.Name)) ||
+                                   ActiveSections.Any(asSec => CategoryMatches(asSec, tag.Name));
                 }
             }
         }
@@ -1191,7 +1206,7 @@ namespace Striverum
             // Get Version Number
             try
             {
-                var StriverumVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
+                var StriverumVersion = FileVersionInfo.GetVersionInfo(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Striverum.exe")).FileVersion;
                 if (!string.IsNullOrEmpty(StriverumVersion) && StriverumVersion.Contains('.'))
                     version = StriverumVersion.Substring(0, StriverumVersion.LastIndexOf('.'));
                 else
@@ -1265,17 +1280,20 @@ namespace Striverum
                 };
             }
 
-            if (Global.config.CurrentGame == "Dragon Ball FighterZ" || string.IsNullOrEmpty(Global.config.CurrentGame))
+            // Enforce Guilty Gear -Strive- and clean up any legacy game configs
+            if (Global.config.CurrentGame != "Guilty Gear -Strive-")
             {
-                if (Global.config.Configs.ContainsKey("Dragon Ball FighterZ"))
+                if (Global.config.Configs.ContainsKey(Global.config.CurrentGame) && !Global.config.Configs.ContainsKey("Guilty Gear -Strive-"))
                 {
-                    if (!Global.config.Configs.ContainsKey("Guilty Gear -Strive-"))
-                    {
-                        Global.config.Configs["Guilty Gear -Strive-"] = Global.config.Configs["Dragon Ball FighterZ"];
-                    }
-                    Global.config.Configs.Remove("Dragon Ball FighterZ");
+                    Global.config.Configs["Guilty Gear -Strive-"] = Global.config.Configs[Global.config.CurrentGame];
                 }
                 Global.config.CurrentGame = "Guilty Gear -Strive-";
+            }
+            if (Global.config.Configs.ContainsKey("Dragon Ball FighterZ"))
+            {
+                if (!Global.config.Configs.ContainsKey("Guilty Gear -Strive-"))
+                    Global.config.Configs["Guilty Gear -Strive-"] = Global.config.Configs["Dragon Ball FighterZ"];
+                Global.config.Configs.Remove("Dragon Ball FighterZ");
             }
 
             if (!Global.config.Configs.ContainsKey(Global.config.CurrentGame))
@@ -1288,11 +1306,8 @@ namespace Striverum
                 };
             }
 
-            int ggsIndex = Global.games.IndexOf(Global.config.CurrentGame);
-            GameBox.SelectedIndex = ggsIndex >= 0 ? ggsIndex : Global.games.IndexOf("Guilty Gear -Strive-");
-
-            if (GameBox.SelectedIndex == 7)
-                DiscordButton.Visibility = Visibility.Collapsed;
+            int ggsIndex = Global.games.IndexOf("Guilty Gear -Strive-");
+            GameBox.SelectedIndex = ggsIndex >= 0 ? ggsIndex : 0;
 
             if (String.IsNullOrEmpty(Global.config.Configs[Global.config.CurrentGame].CurrentLoadout))
                 Global.config.Configs[Global.config.CurrentGame].CurrentLoadout = "Default";
@@ -1321,29 +1336,19 @@ namespace Striverum
             LoadoutsBox.ItemsSource = Global.LoadoutItems;
             LoadoutsBox.SelectedItem = Global.config.Configs[Global.config.CurrentGame].CurrentLoadout;
 
-            if ((String.IsNullOrEmpty(Global.config.Configs[Global.config.CurrentGame].ModsFolder)
-                && Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase)
-                && Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex == 1) ||
-                (!Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase)
-                && Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex == 0 &&
+            if (Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex == 0 &&
                 (String.IsNullOrEmpty(Global.config.Configs[Global.config.CurrentGame].ModsFolder)
                 || String.IsNullOrEmpty(Global.config.Configs[Global.config.CurrentGame].Launcher)
-                || !File.Exists(Global.config.Configs[Global.config.CurrentGame].Launcher))))
+                || !File.Exists(Global.config.Configs[Global.config.CurrentGame].Launcher)))
             {
                 LaunchButton.IsEnabled = false;
                 Global.logger.WriteLine("Please click Setup before starting!", LoggerType.Warning);
             }
 
-            if (Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
-            {
-                LauncherOptions[0] = "Emulator";
-                LauncherOptions[1] = "Hardware";
-            }
-            else if (Global.config.CurrentGame.Equals("Kingdom Hearts III", StringComparison.InvariantCultureIgnoreCase))
-                LauncherOptions[1] = "Epic Games";
-            else if (Global.config.CurrentGame.Equals("The King of Fighters XV", StringComparison.InvariantCultureIgnoreCase)
-                || Global.config.CurrentGame.Equals("MultiVersus", StringComparison.InvariantCultureIgnoreCase))
-                LauncherOptions.Add("Epic Games");
+            LauncherOptions[0] = "Executable";
+            LauncherOptions[1] = "Steam";
+            if (LauncherOptions.Count > 2)
+                LauncherOptions.RemoveAt(2);
 
             Directory.CreateDirectory($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}");
 
@@ -1393,70 +1398,83 @@ namespace Striverum
         private void WindowLoaded(object sender, RoutedEventArgs e)
         {
             OnFirstOpen();
-
-            if (Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                LauncherOptionsBox.IsEnabled = false;
-            else
-                LauncherOptionsBox.IsEnabled = true;
-
+            LauncherOptionsBox.IsEnabled = true;
             LauncherOptionsBox.ItemsSource = LauncherOptions;
             LauncherOptionsBox.SelectedIndex = Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex;
         }
         private void OnModified(object sender, FileSystemEventArgs e)
         {
-            Refresh();
-            Global.UpdateConfig();
-            // Bring window to front after download is done
-            App.Current.Dispatcher.Invoke((Action)delegate
+            try
             {
-                Activate();
-            });
+                App.Current.Dispatcher.Invoke((Action)delegate
+                {
+                    Refresh();
+                    Global.UpdateConfig();
+                    Activate();
+                });
+            }
+            catch (Exception ex)
+            {
+                Global.logger.WriteLine($"OnModified error: {ex.Message}", LoggerType.Error);
+            }
         }
 
         private async void Refresh()
         {
             var currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            if (!Directory.Exists(currentModDirectory)) return;
+
             // Add new folders found in Mods to the ModList
             foreach (var mod in Directory.GetDirectories(currentModDirectory))
             {
-                if (Global.ModList.ToList().Where(x => x.name == Path.GetFileName(mod)).Count() == 0)
+                string modFolderName = Path.GetFileName(mod);
+                if (Global.ModList != null && !Global.ModList.Any(x => x.name == modFolderName))
                 {
                     Mod m = new Mod();
-                    m.name = Path.GetFileName(mod);
+                    m.name = modFolderName;
                     m.enabled = false;
                     App.Current.Dispatcher.Invoke((Action)delegate
                     {
                         Global.ModList.Add(m);
                     });
-                    Global.logger.WriteLine($"Added {Path.GetFileName(mod)}", LoggerType.Info);
+                    Global.logger.WriteLine($"Added {modFolderName}", LoggerType.Info);
                 }
             }
             // Remove deleted folders that are still in the ModList
-            foreach (var mod in Global.ModList.ToList())
+            if (Global.ModList != null)
             {
-                if (!Directory.GetDirectories(currentModDirectory).ToList().Select(x => Path.GetFileName(x)).Contains(mod.name))
+                foreach (var mod in Global.ModList.ToList())
                 {
-                    App.Current.Dispatcher.Invoke((Action)delegate
+                    string modPath = $"{currentModDirectory}{Global.s}{mod.name}";
+                    if (!Directory.Exists(modPath))
                     {
-                        Global.ModList.Remove(mod);
-                    });
-                    Global.logger.WriteLine($"Deleted {mod.name}", LoggerType.Info);
-                    continue;
-                }
-                // Update all paks found
-                if (mod.paks == null)
-                    mod.paks = new();
-                foreach (var file in Directory.GetFiles($"{currentModDirectory}{Global.s}{mod.name}", "*.*", SearchOption.AllDirectories))
-                {
-                    if (Path.GetExtension(file).Equals(".pak", StringComparison.InvariantCultureIgnoreCase)
-                        && !mod.paks.ContainsKey(file))
-                        mod.paks.Add(file, true); // Enable all paks when first added
-                }
-                // Remove all paks that no longer exist
-                foreach (var pak in mod.paks.Keys)
-                {
-                    if (!File.Exists(pak))
-                        mod.paks.Remove(pak);
+                        App.Current.Dispatcher.Invoke((Action)delegate
+                        {
+                            Global.ModList.Remove(mod);
+                        });
+                        Global.logger.WriteLine($"Deleted {mod.name}", LoggerType.Info);
+                        continue;
+                    }
+                    // Update all paks found
+                    if (mod.paks == null)
+                        mod.paks = new();
+                    try
+                    {
+                        foreach (var file in Directory.GetFiles(modPath, "*.*", SearchOption.AllDirectories))
+                        {
+                            if (Path.GetExtension(file).Equals(".pak", StringComparison.InvariantCultureIgnoreCase)
+                                && !mod.paks.ContainsKey(file))
+                                mod.paks.Add(file, true); // Enable all paks when first added
+                        }
+                    }
+                    catch { }
+
+                    // Remove all paks that no longer exist (safe copy of keys)
+                    foreach (var pak in mod.paks.Keys.ToList())
+                    {
+                        if (!File.Exists(pak))
+                            mod.paks.Remove(pak);
+                    }
                 }
             }
 
@@ -1466,6 +1484,7 @@ namespace Striverum
             foreach (var mod in Global.ModList)
             {
                 string modJsonPath = $@"{currentModDirectory}{Global.s}{mod.name}{Global.s}mod.json";
+                bool isGameBanana = false;
                 if (File.Exists(modJsonPath))
                 {
                     try
@@ -1476,11 +1495,11 @@ namespace Striverum
                             mod.cat = meta.cat;
                             mod.subcategory = meta.subcategory;
                             mod.caticon = meta.caticon;
-                            mod.tags = meta.tags ?? new List<string>();
-                            if (!string.IsNullOrEmpty(mod.cat) && !mod.tags.Contains(mod.cat))
-                                mod.tags.Insert(0, mod.cat);
-                            if (!string.IsNullOrEmpty(mod.subcategory) && !mod.tags.Contains(mod.subcategory))
-                                mod.tags.Add(mod.subcategory);
+
+                            if (meta.homepage != null && meta.homepage.ToString().Contains("gamebanana.com", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isGameBanana = true;
+                            }
 
                             if (meta.caticon != null)
                             {
@@ -1489,9 +1508,36 @@ namespace Striverum
                                 if (File.Exists(iconCachePath))
                                     mod.cachedIconPath = iconCachePath;
                             }
+
+                            if (meta.tags != null)
+                            {
+                                mod.tags = new List<string>(meta.tags);
+                            }
                         }
                     }
                     catch { }
+                }
+
+                // If mod has no saved tags yet, initialize with default tags
+                if (mod.tags == null)
+                {
+                    mod.tags = new List<string>();
+                    if (isGameBanana)
+                    {
+                        if (!string.IsNullOrEmpty(mod.cat) && !mod.tags.Contains(mod.cat))
+                            mod.tags.Add(mod.cat);
+                        if (!string.IsNullOrEmpty(mod.subcategory) && !mod.tags.Contains(mod.subcategory))
+                            mod.tags.Add(mod.subcategory);
+                    }
+                    else
+                    {
+                        mod.tags.Add("Unknown");
+                    }
+                }
+
+                if (string.IsNullOrEmpty(mod.cat) && !isGameBanana)
+                {
+                    mod.cat = "Unknown";
                 }
 
                 // If subcategory has an icon, attach it to the CategoryItem in _sections
@@ -1539,7 +1585,8 @@ namespace Striverum
                     {
                         var tagItem = new ModTag { Name = tag };
                         ResolveModTagIcon(tagItem, mod);
-                        tagItem.IsActive = ActiveCategories.Contains(tag) || ActiveSections.Contains(tag);
+                        tagItem.IsActive = ActiveCategories.Any(ac => CategoryMatches(ac, tag)) ||
+                                           ActiveSections.Any(asSec => CategoryMatches(asSec, tag));
                         mod.TagItems.Add(tagItem);
                     }
                 }
@@ -1554,8 +1601,16 @@ namespace Striverum
                     SectionSidebar.ItemsSource = _sections;
                     ModListView.ItemsSource = Global.ModList;
                     RefreshModList();
-                    Stats.Text = $"{Global.ModList.Count} mods • {Directory.GetFiles($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", "*", SearchOption.AllDirectories).Length.ToString("N0")} files • " +
-                    $"{StringConverters.FormatSize(new DirectoryInfo($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}").GetDirectorySize())} • v{version}";
+                    int fileCount = 0;
+                    long totalSize = 0;
+                    try
+                    {
+                        fileCount = Directory.GetFiles(currentModDirectory, "*", SearchOption.AllDirectories).Length;
+                        totalSize = new DirectoryInfo(currentModDirectory).GetDirectorySize();
+                    }
+                    catch { }
+
+                    Stats.Text = $"{Global.ModList?.Count ?? 0} mods • {fileCount:N0} files • {StringConverters.FormatSize(totalSize)} • v{version}";
                 });
             });
             Global.config.Configs[Global.config.CurrentGame].ModList = Global.ModList;
@@ -1564,16 +1619,19 @@ namespace Striverum
         private void RefreshAll()
         {
             var currentModDirectory = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}";
+            if (!Directory.Exists(currentModDirectory)) return;
+
             var currlist = Global.config.Configs[Global.config.CurrentGame].CurrentLoadout;
             foreach (var list in Global.config.Configs[Global.config.CurrentGame].Loadouts)
             {
                 // Add new folders found in Mods to the ModList
                 foreach (var mod in Directory.GetDirectories(currentModDirectory))
                 {
-                    if (list.Value.ToList().Where(x => x.name == Path.GetFileName(mod)).Count() == 0)
+                    string modName = Path.GetFileName(mod);
+                    if (list.Value.ToList().Where(x => x.name == modName).Count() == 0)
                     {
                         Mod m = new Mod();
-                        m.name = Path.GetFileName(mod);
+                        m.name = modName;
                         m.enabled = false;
                         App.Current.Dispatcher.Invoke((Action)delegate
                         {
@@ -1584,7 +1642,8 @@ namespace Striverum
                 // Remove deleted folders that are still in the ModList
                 foreach (var mod in list.Value.ToList())
                 {
-                    if (!Directory.GetDirectories(currentModDirectory).ToList().Select(x => Path.GetFileName(x)).Contains(mod.name))
+                    string modPath = $"{currentModDirectory}{Global.s}{mod.name}";
+                    if (!Directory.Exists(modPath))
                     {
                         App.Current.Dispatcher.Invoke((Action)delegate
                         {
@@ -1595,14 +1654,19 @@ namespace Striverum
                     // Update all paks found
                     if (mod.paks == null)
                         mod.paks = new();
-                    foreach (var file in Directory.GetFiles($"{currentModDirectory}{Global.s}{mod.name}", "*.*", SearchOption.AllDirectories))
+                    try
                     {
-                        if (Path.GetExtension(file).Equals(".pak", StringComparison.InvariantCultureIgnoreCase)
-                            && !mod.paks.ContainsKey(file))
-                            mod.paks.Add(file, true); // Enable all paks when first added
+                        foreach (var file in Directory.GetFiles(modPath, "*.*", SearchOption.AllDirectories))
+                        {
+                            if (Path.GetExtension(file).Equals(".pak", StringComparison.InvariantCultureIgnoreCase)
+                                && !mod.paks.ContainsKey(file))
+                                mod.paks.Add(file, true); // Enable all paks when first added
+                        }
                     }
-                    // Remove all paks that no longer exist
-                    foreach (var pak in mod.paks.Keys)
+                    catch { }
+
+                    // Remove all paks that no longer exist (safe copy of keys)
+                    foreach (var pak in mod.paks.Keys.ToList())
                     {
                         if (!File.Exists(pak))
                             mod.paks.Remove(pak);
@@ -1770,8 +1834,7 @@ namespace Striverum
                     GameBox.IsEnabled = true;
                     EditLoadoutsButton.IsEnabled = true;
                     LoadoutsBox.IsEnabled = true;
-                    if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                        LauncherOptionsBox.IsEnabled = true;
+                    LauncherOptionsBox.IsEnabled = true;
                     return;
                 }
                 ModListView.IsEnabled = true;
@@ -1782,8 +1845,7 @@ namespace Striverum
                 GameBox.IsEnabled = true;
                 EditLoadoutsButton.IsEnabled = true;
                 LoadoutsBox.IsEnabled = true;
-                if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                    LauncherOptionsBox.IsEnabled = true;
+                LauncherOptionsBox.IsEnabled = true;
             }
             else
             {
@@ -1791,38 +1853,7 @@ namespace Striverum
                 return;
             }
             // Launch game
-            if (Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
-            {
-                if (LauncherOptionsBox.SelectedIndex == 1)
-                    return;
-                else if (Global.config.Configs[Global.config.CurrentGame].Launcher == null || !File.Exists(Global.config.Configs[Global.config.CurrentGame].Launcher)
-                    && Global.config.Configs[Global.config.CurrentGame].GamePath == null || !File.Exists(Global.config.Configs[Global.config.CurrentGame].GamePath))
-                {
-                    Global.logger.WriteLine($"Please click Setup to configure launching from emulator!", LoggerType.Warning);
-                    return;
-                }
-                else
-                {
-                    try
-                    {
-                        Global.logger.WriteLine($"Launching {Global.config.Configs[Global.config.CurrentGame].GamePath} with {Global.config.Configs[Global.config.CurrentGame].Launcher}", LoggerType.Info);
-                        var ps = new ProcessStartInfo(Global.config.Configs[Global.config.CurrentGame].Launcher)
-                        {
-                            WorkingDirectory = Path.GetDirectoryName(Global.config.Configs[Global.config.CurrentGame].Launcher),
-                            UseShellExecute = true,
-                            Verb = "open",
-                            Arguments = $"\"{Global.config.Configs[Global.config.CurrentGame].GamePath}\""
-                        };
-                        Process.Start(ps);
-                    }
-                    catch (Exception ex)
-                    {
-                        Global.logger.WriteLine($"Couldn't launch {Global.config.Configs[Global.config.CurrentGame].GamePath} with {Global.config.Configs[Global.config.CurrentGame].Launcher} ({ex.Message})", LoggerType.Error);
-                    }
-
-                }
-            }
-            else if (Global.config.Configs[Global.config.CurrentGame].Launcher != null && File.Exists(Global.config.Configs[Global.config.CurrentGame].Launcher))
+            if (Global.config.Configs[Global.config.CurrentGame].Launcher != null && File.Exists(Global.config.Configs[Global.config.CurrentGame].Launcher))
             {
                 var path = Global.config.Configs[Global.config.CurrentGame].Launcher;
                 try
@@ -1874,17 +1905,7 @@ namespace Striverum
         {
             try
             {
-                string discordLink;
-                var index = managerSelected ? GameBox.SelectedIndex : GameFilterBox.SelectedIndex;
-                switch (index)
-                {
-                    case 9:
-                        discordLink = "https://discord.gg/Se2XTnA";
-                        break;
-                    default:
-                        discordLink = "https://discord.gg/tgFrebr";
-                        break;
-                }
+                string discordLink = "https://discord.gg/tgFrebr";
                 var ps = new ProcessStartInfo(discordLink)
                 {
                     UseShellExecute = true,
@@ -1902,43 +1923,125 @@ namespace Striverum
             ConsoleWindow.ScrollToEnd();
         }
 
+        private void ModListItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var item = sender as ListBoxItem;
+            if (item != null)
+            {
+                item.IsSelected = true;
+                item.Focus();
+            }
+        }
+
         private void ModListView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            FrameworkElement element = sender as FrameworkElement;
-            if (element == null)
+            var dep = e.OriginalSource as DependencyObject;
+            while (dep != null && !(dep is ListBoxItem) && dep != ModListView)
             {
-                return;
+                dep = VisualTreeHelper.GetParent(dep);
             }
+            if (!(dep is ListBoxItem) || ModListView.SelectedItem == null)
+            {
+                e.Handled = true;
+            }
+        }
 
-            if (ModListView.SelectedItem == null)
-                element.ContextMenu.Visibility = Visibility.Collapsed;
-            else
-                element.ContextMenu.Visibility = Visibility.Visible;
+        private void EditTags_Click(object sender, RoutedEventArgs e)
+        {
+            var mod = ModListView.SelectedItem as Mod;
+            if (mod == null) return;
+
+            var editTagsWindow = new EditTagsWindow(mod);
+            editTagsWindow.Owner = this;
+            if (editTagsWindow.ShowDialog() == true)
+            {
+                // Re-resolve tags and UI icons
+                mod.TagItems.Clear();
+                if (mod.tags != null)
+                {
+                    foreach (var tag in mod.tags)
+                    {
+                        var tagItem = new ModTag { Name = tag };
+                        ResolveModTagIcon(tagItem, mod);
+                        tagItem.IsActive = ActiveCategories.Any(ac => CategoryMatches(ac, tag)) ||
+                                           ActiveSections.Any(asSec => CategoryMatches(asSec, tag));
+                        mod.TagItems.Add(tagItem);
+                    }
+                }
+                UpdateModCounts();
+                UpdateModTagActiveStates();
+                RefreshModList();
+            }
         }
 
         private async void DeleteItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModListView.SelectedItems;
-            var temp = new Mod[selectedMods.Count];
-            selectedMods.CopyTo(temp, 0);
-            foreach (var row in temp)
-                if (row != null)
+            var selectedMods = ModListView.SelectedItems.Cast<Mod>().ToList();
+            if (selectedMods.Count == 0) return;
+
+            foreach (var row in selectedMods)
+            {
+                if (row == null) continue;
+
+                var dialogResult = MessageBox.Show(
+                    $"Are you sure you want to delete {row.name}?" + Environment.NewLine + "This cannot be undone.",
+                    $"Deleting {row.name}: Confirmation",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (dialogResult == MessageBoxResult.Yes)
                 {
-                    var dialogResult = MessageBox.Show($@"Are you sure you want to delete {row.name}?" + Environment.NewLine + "This cannot be undone.", $@"Deleting {row.name}: Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                    if (dialogResult == MessageBoxResult.Yes)
+                    try
                     {
-                        try
+                        if (ModsWatcher != null)
+                            ModsWatcher.EnableRaisingEvents = false;
+
+                        string modDir = $@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{row.name}";
+                        if (Directory.Exists(modDir))
                         {
-                            await Task.Run(() => Directory.Delete($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{row.name}", true));
-                            Global.logger.WriteLine($@"Deleting {row.name}.", LoggerType.Info);
-                            ShowMetadata(null);
+                            await Task.Run(() =>
+                            {
+                                try
+                                {
+                                    Directory.Delete(modDir, true);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Global.logger.WriteLine($"Couldn't delete {row.name} on disk: {ex.Message}", LoggerType.Error);
+                                }
+                            });
                         }
-                        catch (Exception ex)
+
+                        // Remove from all loadouts
+                        if (Global.config.Configs.ContainsKey(Global.config.CurrentGame) &&
+                            Global.config.Configs[Global.config.CurrentGame].Loadouts != null)
                         {
-                            Global.logger.WriteLine($@"Couldn't delete {row.name} ({ex.Message})", LoggerType.Error);
+                            foreach (var loadoutList in Global.config.Configs[Global.config.CurrentGame].Loadouts.Values)
+                            {
+                                var match = loadoutList.FirstOrDefault(m => m.name == row.name);
+                                if (match != null)
+                                    loadoutList.Remove(match);
+                            }
                         }
+
+                        Global.ModList.Remove(row);
+                        Global.logger.WriteLine($"Deleted {row.name}.", LoggerType.Info);
+                        ShowMetadata(null);
+                        UpdateModCounts();
+                        RefreshModList();
+                        Global.UpdateConfig();
+                    }
+                    catch (Exception ex)
+                    {
+                        Global.logger.WriteLine($"Couldn't delete {row.name} ({ex.Message})", LoggerType.Error);
+                    }
+                    finally
+                    {
+                        if (ModsWatcher != null)
+                            ModsWatcher.EnableRaisingEvents = true;
                     }
                 }
+            }
         }
 
         private async Task<bool> Build(string path)
@@ -1958,7 +2061,7 @@ namespace Striverum
                     MoviesFolder = $"{ContentFolder}{Global.s}Binaries{Global.s}Movie";
                 else if (Directory.Exists($"{ContentFolder}{Global.s}Movies"))
                     MoviesFolder = $"{ContentFolder}{Global.s}Movie";
-                if (Directory.Exists($"{ContentFolder}{Global.s}Sound") && !Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
+                if (Directory.Exists($"{ContentFolder}{Global.s}Sound"))
                     SoundsFolder = $"{ContentFolder}{Global.s}Sound";
                 else if (Directory.Exists($"{ContentFolder}{Global.s}CriWareData"))
                     SoundsFolder = $"{ContentFolder}{Global.s}CriWareData";
@@ -2379,14 +2482,14 @@ namespace Striverum
             Button button = sender as Button;
             var item = button?.DataContext as GameBananaRecord;
             if (item != null)
-                new ModDownloader().BrowserDownload(Global.games[0], item);
+                new ModDownloader().BrowserDownload(Global.config.CurrentGame, item);
         }
         private void AltDownload_Click(object sender, RoutedEventArgs e)
         {
             Button button = sender as Button;
             var item = button.DataContext as GameBananaRecord;
             new AltLinkWindow(item.AlternateFileSources, item.Title,
-                (((GameFilterBox.SelectedValue as ComboBoxItem).Content as StackPanel).Children[1] as TextBlock).Text.Trim().Replace(":", String.Empty),
+                Global.config.CurrentGame,
                 item.Link.AbsoluteUri).ShowDialog();
         }
         private void Homepage_Click(object sender, RoutedEventArgs e)
@@ -2824,26 +2927,10 @@ namespace Striverum
         }
         private void OnBrowserTabSelected(object sender, RoutedEventArgs e)
         {
-            managerSelected = false;
-            if (GameFilterBox.SelectedIndex != 7)
-                DiscordButton.Visibility = Visibility.Visible;
-            else
-                DiscordButton.Visibility = Visibility.Collapsed;
-            if (GameFilterBox.SelectedIndex == 1)
-                SZFilters.Visibility = Visibility.Visible;
-            else
-                SZFilters.Visibility = Visibility.Collapsed;
+            DiscordButton.Visibility = Visibility.Visible;
             if (!selected)
             {
                 InitializeBrowser();
-                if (GameBox.SelectedIndex != 7)
-                    DiscordButton.Visibility = Visibility.Visible;
-                else
-                    DiscordButton.Visibility = Visibility.Collapsed;
-                if (GameBox.SelectedIndex == 1)
-                    SZFilters.Visibility = Visibility.Visible;
-                else
-                    SZFilters.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -2851,18 +2938,9 @@ namespace Striverum
                 UpdateBrowseCategoryPillCounts();
             }
         }
-        bool managerSelected = true;
         private void OnManagerTabSelected(object sender, RoutedEventArgs e)
         {
-            managerSelected = true;
-            if (GameBox.SelectedIndex != 7)
-                DiscordButton.Visibility = Visibility.Visible;
-            else
-                DiscordButton.Visibility = Visibility.Collapsed;
-            if (GameFilterBox.SelectedIndex == 1)
-                SZFilters.Visibility = Visibility.Visible;
-            else
-                SZFilters.Visibility = Visibility.Collapsed;
+            DiscordButton.Visibility = Visibility.Visible;
         }
 
         private static int page = 1;
@@ -3589,86 +3667,37 @@ namespace Striverum
 
         private void OnFirstOpen()
         {
-            if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase) && !Global.config.Configs[Global.config.CurrentGame].FirstOpen)
+            if (!Global.config.Configs[Global.config.CurrentGame].FirstOpen)
             {
-                ChoiceWindow choice;
-                var store = Global.config.CurrentGame.Equals("Kingdom Hearts III", StringComparison.InvariantCultureIgnoreCase) ? "Epic Games" : "Steam";
-                var choices = new List<Choice>();
-                if (Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
+                var choices = new List<Choice>
                 {
-                    choices.Add(new Choice()
-                    {
-                        OptionText = "Launch through Emulator",
-                        OptionSubText = "Launches the game through Yuzu or Ryujinx emulator",
-                        Index = 0
-                    });
-                    choices.Add(new Choice()
-                    {
-                        OptionText = "Build for Hardware",
-                        OptionSubText = "Builds mod output without launching the game",
-                        Index = 1
-                    });
-                }
-                else if (Global.config.CurrentGame.Equals("Granblue Fantasy Versus Rising", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    choices.Add(new Choice()
-                    {
-                        OptionText = "Launch through Executable",
-                        OptionSubText = "Launches the executable directly with -fileopenlog argument",
-                        Index = 0
-                    });
-                    choices.Add(new Choice()
-                    {
-                        OptionText = $"Launch through {store}",
-                        OptionSubText = $"Uses the {store} shortcut to launch. Need to manually add -fileopenlog to\nManage > Properties... > General > Launch Options on Steam for mods to work",
-                        Index = 1
-                    });
-                }
-                else
-                {
-                    choices.Add(new Choice()
+                    new Choice()
                     {
                         OptionText = "Launch through Executable",
                         OptionSubText = "Launches the executable directly",
                         Index = 0,
                         FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Play
-                    });
-                    choices.Add(new Choice()
+                    },
+                    new Choice()
                     {
-                        OptionText = $"Launch through {store}",
-                        OptionSubText = $"Uses the {store} shortcut to launch",
+                        OptionText = "Launch through Steam",
+                        OptionSubText = "Uses the Steam shortcut to launch",
                         Index = 1,
-                        FaIcon = store == "Steam" ? FontAwesome5.EFontAwesomeIcon.Brands_Steam : FontAwesome5.EFontAwesomeIcon.Solid_Gamepad
-                    });
-                }
-                if (Global.config.CurrentGame.Equals("The King of Fighters XV", StringComparison.InvariantCultureIgnoreCase)
-                    || Global.config.CurrentGame.Equals("MultiVersus", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    choices.Add(new Choice()
-                    {
-                        OptionText = $"Launch through Epic Games",
-                        OptionSubText = $"Uses the Epic Games shortcut to launch",
-                        Index = 2
-                    });
-                }
-                choice = new ChoiceWindow(choices, $"Launcher Options for {Global.config.CurrentGame}");
+                        FaIcon = FontAwesome5.EFontAwesomeIcon.Brands_Steam
+                    }
+                };
+                var choice = new ChoiceWindow(choices, $"Launcher Options for {Global.config.CurrentGame}");
                 choice.ShowDialog();
                 if (choice.choice != null)
                 {
                     Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex = (int)choice.choice;
                     LauncherOptionsBox.SelectedIndex = (int)choice.choice;
                 }
-                else if (!Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Global.logger.WriteLine($"No launch option chosen, defaulting to {store} shortcut", LoggerType.Warning);
-                    Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex = 1;
-                    LauncherOptionsBox.SelectedIndex = 1;
-                }
                 else
                 {
-                    Global.logger.WriteLine($"No launch option chosen, defaulting to emulator setup", LoggerType.Warning);
-                    Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex = 0;
-                    LauncherOptionsBox.SelectedIndex = 0;
+                    Global.logger.WriteLine("No launch option chosen, defaulting to Steam shortcut", LoggerType.Warning);
+                    Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex = 1;
+                    LauncherOptionsBox.SelectedIndex = 1;
                 }
                 Global.config.Configs[Global.config.CurrentGame].FirstOpen = true;
                 Global.UpdateConfig();
@@ -3901,40 +3930,14 @@ namespace Striverum
                 {
                     LaunchButton.IsEnabled = true;
                 }
-                if (Global.config.CurrentGame.Equals("Shin Megami Tensei V", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    LauncherOptions[0] = "Emulator";
-                    LauncherOptions[1] = "Hardware";
-                    if (LauncherOptions.Count > 2)
-                        LauncherOptions.RemoveAt(2);
-                }
-                else if (Global.config.CurrentGame.Equals("Kingdom Hearts III", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    LauncherOptions[0] = "Executable";
-                    LauncherOptions[1] = "Epic Games";
-                    if (LauncherOptions.Count > 2)
-                        LauncherOptions.RemoveAt(2);
-                }
-                else if (Global.config.CurrentGame.Equals("The King of Fighters XV", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    LauncherOptions[0] = "Executable";
-                    LauncherOptions[1] = "Steam";
-                    LauncherOptions.Add("Epic Games");
-                }
-                else
-                {
-                    LauncherOptions[0] = "Executable";
-                    LauncherOptions[1] = "Steam";
-                    if (LauncherOptions.Count > 2)
-                        LauncherOptions.RemoveAt(2);
-                }
+                LauncherOptions[0] = "Executable";
+                LauncherOptions[1] = "Steam";
+                if (LauncherOptions.Count > 2)
+                    LauncherOptions.RemoveAt(2);
 
                 OnFirstOpen();
 
-                if (Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                    LauncherOptionsBox.IsEnabled = false;
-                else
-                    LauncherOptionsBox.IsEnabled = true;
+                LauncherOptionsBox.IsEnabled = true;
                 LauncherOptionsBox.ItemsSource = LauncherOptions;
                 LauncherOptionsBox.SelectedIndex = Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex;
 

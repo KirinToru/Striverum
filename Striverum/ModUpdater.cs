@@ -102,8 +102,7 @@ namespace Striverum
                 main.UpdateButton.IsEnabled = true;
                 main.EditLoadoutsButton.IsEnabled = true;
                 main.LoadoutsBox.IsEnabled = true;
-                if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                    main.LauncherOptionsBox.IsEnabled = true;
+                main.LauncherOptionsBox.IsEnabled = true;
                 return;
             }
             List<GameBananaAPIV4> response = new List<GameBananaAPIV4>();
@@ -130,8 +129,7 @@ namespace Striverum
                             main.UpdateButton.IsEnabled = true;
                             main.EditLoadoutsButton.IsEnabled = true;
                             main.LoadoutsBox.IsEnabled = true;
-                            if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                                main.LauncherOptionsBox.IsEnabled = true;
+                            main.LauncherOptionsBox.IsEnabled = true;
                             return;
                         }
                     }
@@ -168,8 +166,7 @@ namespace Striverum
             main.UpdateButton.IsEnabled = true;
             main.EditLoadoutsButton.IsEnabled = true;
             main.LoadoutsBox.IsEnabled = true;
-            if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
-                main.LauncherOptionsBox.IsEnabled = true;
+            main.LauncherOptionsBox.IsEnabled = true;
             main.Activate();
         }
         private static void ReportUpdateProgress(DownloadProgress progress)

@@ -1,31 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.IO;
-using System.Reflection;
-using System.Windows.Input;
-using System.Windows.Controls.Primitives;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls.Primitives;
 
 namespace Striverum.UI
 {
-    /// <summary>
-    /// Interaction logic for ConfigurePaksWindow.xaml
-    /// </summary>
     public partial class ConfigurePaksWindow : Window
     {
         public Mod _mod;
+
         public ConfigurePaksWindow(Mod mod)
         {
             InitializeComponent();
             if (mod != null)
             {
                 _mod = mod;
+                Title = $"Configure Paks - {_mod.name}";
+                ModNameBlock.Text = _mod.name;
                 PakList.ItemsSource = new ObservableCollection<KeyValuePair<string, bool>>(_mod.paks);
-                Title = $"Configure Paks for {_mod.name}";
+                UpdateStatus();
+            }
+        }
+
+        private void UpdateStatus()
+        {
+            if (_mod?.paks != null)
+            {
+                int enabledCount = _mod.paks.Values.Count(v => v);
+                PakCountBlock.Text = $"{enabledCount} of {_mod.paks.Count} packages enabled";
             }
         }
 
@@ -33,11 +37,14 @@ namespace Striverum.UI
         {
             Close();
         }
+
         private void ToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            ToggleButton button = sender as ToggleButton;
-            var item = button.DataContext as KeyValuePair<string, bool>?;
-            _mod.paks[item.Value.Key] = (bool)button.IsChecked;
+            if (sender is ToggleButton button && button.DataContext is KeyValuePair<string, bool> item && _mod?.paks != null)
+            {
+                _mod.paks[item.Key] = button.IsChecked == true;
+                UpdateStatus();
+            }
         }
     }
 }

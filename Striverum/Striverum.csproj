@@ -4,12 +4,23 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <AssemblyName>Striverum</AssemblyName>
-    <RootNamespace>Unverum</RootNamespace>
+    <RootNamespace>Striverum</RootNamespace>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\striverum.ico</ApplicationIcon>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1</Version>
+    <PublishRelease>true</PublishRelease>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <NoWarn>$(NoWarn);NU1902</NoWarn>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>embedded</DebugType>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained Condition="'$(SelfContained)' == ''">true</SelfContained>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\publish\</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,9 +36,7 @@
     <PackageReference Include="FontAwesome5" Version="2.1.0" />
     <PackageReference Include="gong-wpf-dragdrop" Version="2.3.2" />
     <PackageReference Include="Onova" Version="2.6.2" />
-    <PackageReference Include="SharpCompress" Version="0.28.1" />
-    <PackageReference Include="WindowsAPICodePack-Core" Version="1.1.2" />
-    <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
+    <PackageReference Include="SharpCompress" Version="0.39.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,33 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Dependencies\jfaddslots\common_battle.uasset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\common_battle.uexp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\JFAddSlots.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\resident_param.uasset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\resident_param.uexp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\systemtext_EN.uasset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\systemtext_EN.uexp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\ui_characterselect.uasset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Dependencies\jfaddslots\ui_characterselect.uexp">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+
     <None Update="Dependencies\quickbms\quickbms_4gb_files.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

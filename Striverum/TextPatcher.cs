@@ -68,38 +68,10 @@ namespace Striverum
             startInfo.CreateNoWindow = true;
             startInfo.UseShellExecute = false;
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            if (Global.config.CurrentGame == "My Hero One's Justice 2")
-            {
-                startInfo.WorkingDirectory = Path.GetDirectoryName(quickbms);
-                startInfo.FileName = quickbms;
-                startInfo.Arguments = $@"-Q -Y -a 0 -f ""{filter}"" unreal_tournament_4.bms ""{pak}"" ""{outputFolder}""";
-            }
-            else
-            {
-                startInfo.WorkingDirectory = Path.GetDirectoryName(umodel);
-                startInfo.FileName = umodel;
-                // Set encryption key
-                var aes = String.Empty;
-                switch (Global.config.CurrentGame)
-                {
-                    case "Dragon Ball FighterZ":
-                        aes = "b9uW0RKNY91be8HN3Lemi68j6Xsi2l7fQJYsp5oR4al4C4c9kY5E0l90411l9P3L";
-                        break;
-                    case "Guilty Gear -Strive-":
-                        aes = "0x3D96F3E41ED4B90B6C96CA3B2393F8911A5F6A48FE71F54B495E8F1AFD94CD73";
-                        break;
-                    case "Granblue Fantasy Versus":
-                        aes = "0x2A472D4B6150645367566B597033733676397924423F4528482B4D6251655468";
-                        break;
-                    case "DNF Duel":
-                        aes = "0xC846350F8B8D946D00DC58801A81478FFBEE888C8F9CD323A493C64E89B87ECA";
-                        break;
-                    case "Granblue Fantasy Versus Rising":
-                        aes = "0x6470C12A9B471BBA1D89A72D4F9B84EF709A65B88A85F240B8E99CD631751437";
-                        break;
-                }
-                startInfo.Arguments = $@"-save -aes={aes} -path=""{Path.GetDirectoryName(Global.config.Configs[Global.config.CurrentGame].ModsFolder)}"" {filter}";
-            }
+            startInfo.WorkingDirectory = Path.GetDirectoryName(umodel);
+            startInfo.FileName = umodel;
+            var aes = "0x3D96F3E41ED4B90B6C96CA3B2393F8911A5F6A48FE71F54B495E8F1AFD94CD73";
+            startInfo.Arguments = $@"-save -aes={aes} -path=""{Path.GetDirectoryName(Global.config.Configs[Global.config.CurrentGame].ModsFolder)}"" {filter}";
             Global.logger.WriteLine($"Extracting base files for patching...", LoggerType.Info);
             using (Process process = new Process())
             {
@@ -107,35 +79,19 @@ namespace Striverum
                 process.Start();
                 process.WaitForExit();
             }
-            if (Global.config.CurrentGame == "My Hero One's Justice 2")
+            if (File.Exists(savedPath))
             {
-                if (File.Exists(resourcesPath))
-                {
-                    Global.logger.WriteLine($"Successfully extracted base files for patching", LoggerType.Info);
-                    return true;
-                }
-                else
-                {
-                    Global.logger.WriteLine($"Failed to extract base files, patching will not work", LoggerType.Error);
-                    return false;
-                }
+                Directory.CreateDirectory(Path.GetDirectoryName(resourcesPath));
+                File.Move(savedPath, resourcesPath, true);
+                File.Move(Path.ChangeExtension(savedPath, ".uasset"), Path.ChangeExtension(resourcesPath, ".uasset"), true);
+                Directory.Delete($"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}umodel{Global.s}UModelSaved", true);
+                Global.logger.WriteLine($"Successfully extracted base files for patching", LoggerType.Info);
+                return true;
             }
             else
             {
-                if (File.Exists(savedPath))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(resourcesPath));
-                    File.Move(savedPath, resourcesPath, true);
-                    File.Move(Path.ChangeExtension(savedPath, ".uasset"), Path.ChangeExtension(resourcesPath, ".uasset"), true);
-                    Directory.Delete($"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}umodel{Global.s}UModelSaved", true);
-                    Global.logger.WriteLine($"Successfully extracted base files for patching", LoggerType.Info);
-                    return true;
-                }
-                else
-                {
-                    Global.logger.WriteLine($"Failed to extract base files, patching will not work", LoggerType.Error);
-                    return false;
-                }
+                Global.logger.WriteLine($"Failed to extract base files, patching will not work", LoggerType.Error);
+                return false;
             }
         }
         public static Dictionary<string, Entry> GetEntries()

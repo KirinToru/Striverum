@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Win32;
 using System.IO;
 using System.Reflection;
@@ -8,7 +9,7 @@ namespace Striverum
     {
         public static bool InstallGBHandler()
         {
-            string AppPath = Path.ChangeExtension(Assembly.GetExecutingAssembly().Location, ".exe");
+            string AppPath = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Striverum.exe");
             string protocolName = $"Striverum";
             try
             {
