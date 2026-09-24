@@ -43,13 +43,28 @@ namespace Striverum
                 using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
                 using var response = await client.SendAsync(request, cancellationToken.Token);
 
-                if (!response.IsSuccessStatusCode)
+                HttpResponseMessage activeResponse = response;
+                HttpResponseMessage fallbackResponse = null;
+                if (!activeResponse.IsSuccessStatusCode && GitHubRepo != "Unverum")
+                {
+                    var fallbackUrl = $"https://api.github.com/repos/{GitHubOwner}/Unverum/releases/latest";
+                    using var fallbackRequest = new HttpRequestMessage(HttpMethod.Get, fallbackUrl);
+                    fallbackResponse = await client.SendAsync(fallbackRequest, cancellationToken.Token);
+                    if (fallbackResponse.IsSuccessStatusCode)
+                    {
+                        activeResponse = fallbackResponse;
+                    }
+                }
+
+                if (!activeResponse.IsSuccessStatusCode)
                 {
                     // Fork repository or release might not exist yet, silently return
+                    fallbackResponse?.Dispose();
                     return false;
                 }
 
-                var jsonString = await response.Content.ReadAsStringAsync();
+                var jsonString = await activeResponse.Content.ReadAsStringAsync();
+                fallbackResponse?.Dispose();
                 using var doc = JsonDocument.Parse(jsonString);
                 var root = doc.RootElement;
 
