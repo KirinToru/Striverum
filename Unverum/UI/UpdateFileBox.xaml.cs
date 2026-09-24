@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +14,7 @@ using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.Media;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     /// <summary>
     /// Interaction logic for UpdateFileBox.xaml

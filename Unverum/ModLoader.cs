@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
+using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using SearchOption = System.IO.SearchOption;
 
-namespace Unverum
+namespace Striverum
 {
     public static class ModLoader
     {
@@ -162,14 +162,14 @@ namespace Unverum
             startInfo.FileName = $"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak{Global.s}u4pak.exe";
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             startInfo.WorkingDirectory = $"{Global.assemblyLocation}{Global.s}Dependencies{Global.s}u4pak";
-            startInfo.Arguments = $"pack \"{output}{Global.s}Unverum_9_P.pak\" {path}";
+            startInfo.Arguments = $"pack \"{output}{Global.s}Striverum_9_P.pak\" {path}";
             using (Process process = new Process())
             {
                 process.StartInfo = startInfo;
                 process.Start();
                 process.WaitForExit();
             }
-            var pak = $"{output}{Global.s}Unverum_9_P.pak";
+            var pak = $"{output}{Global.s}Striverum_9_P.pak";
             if (File.Exists(pak))
             {
                 if (sig != null)
@@ -517,25 +517,25 @@ namespace Unverum
             // Check if SZModLib dependency exists if needed
             if (SZModLib)
                 if (!File.Exists($"{SZModLibPath}{Global.s}SZModLib{Global.s}SZModLib.uplugin"))
-                    Global.logger.WriteLine($"SZModLib dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Unverum and include it in mod loadout for all mods to work", LoggerType.Warning);
+                    Global.logger.WriteLine($"SZModLib dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
             // Check if DBColorZ dependency exists if needed
             if (DBColorZ)
                 if (!File.Exists($"{SZModLibPath}{Global.s}DBColorZ{Global.s}DBColorZ.uplugin"))
-                    Global.logger.WriteLine($"DBColorZ dependency not found, please make sure to install \"DBColorZ: The Sparking Zero Color Customizer\" via GameBanana or the Mod Browsing section of Unverum and include it in mod loadout for all mods to work", LoggerType.Warning);
-            // Add Unverum field to JsonFiles.json
+                    Global.logger.WriteLine($"DBColorZ dependency not found, please make sure to install \"DBColorZ: The Sparking Zero Color Customizer\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
+            // Add Striverum field to JsonFiles.json
             if (JsonFiles != null)
             {
                 if (!File.Exists($"{ZSJsonPath}{Global.s}JsonFiles.json"))
-                    Global.logger.WriteLine($"ZeroSpark dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Unverum and include it in mod loadout for all mods to work", LoggerType.Warning);
+                    Global.logger.WriteLine($"ZeroSpark dependency not found, please make sure to install \"SparkingZERO Mod Loader\" via GameBanana or the Mod Browsing section of Striverum and include it in mod loadout for all mods to work", LoggerType.Warning);
                 else
                 {
-                    JsonNode? jsonObject = JsonNode.Parse(File.ReadAllText($"{ZSJsonPath}{Global.s}JsonFiles.json"));
+                    JsonNode jsonObject = JsonNode.Parse(File.ReadAllText($"{ZSJsonPath}{Global.s}JsonFiles.json"));
                     if (jsonObject != null)
                     {
                         var jsonArray = new JsonArray();
                         foreach (var JsonFile in JsonFiles)
                             jsonArray.Add(JsonFile);
-                        jsonObject["Unverum"] = jsonArray;
+                        jsonObject["Striverum"] = jsonArray;
                         string updatedJson = jsonObject.ToJsonString();
                         File.WriteAllText($"{ZSJsonPath}{Global.s}JsonFiles.json", updatedJson);
                     }
@@ -545,7 +545,7 @@ namespace Unverum
             if (patched != null && (bool)patched && Global.config.CurrentGame != "Scarlet Nexus" && Global.config.CurrentGame != "Dragon Ball Sparking! ZERO")
             {
                 var baseFolder = $"{path}{Global.s}--Base--";
-                using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Unverum.Resources.Patches.{Global.config.CurrentGame.Replace(" ", "_").Replace("-", "_")}.Placeholder.--PlaceholderCostumes.pak"))
+                using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Striverum.Resources.Patches.{Global.config.CurrentGame.Replace(" ", "_").Replace("-", "_")}.Placeholder.--PlaceholderCostumes.pak"))
                 {
                     Directory.CreateDirectory(baseFolder);
                     using (var stream = new FileStream($"{baseFolder}{Global.s}--PlaceholderCostumes.pak", FileMode.Create, FileAccess.Write))

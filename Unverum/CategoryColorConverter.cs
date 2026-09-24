@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace Unverum
+namespace Striverum
 {
     public class CategoryColorConverter : IValueConverter
     {

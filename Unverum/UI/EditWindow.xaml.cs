@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +8,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Input;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     /// <summary>
     /// Interaction logic for EditWindow.xaml
@@ -29,12 +29,27 @@ namespace Unverum.UI
                 _name = name;
                 NameBox.Text = name;
                 Title = $"Edit {name}";
+                HeaderIcon.Icon = _folder ? FontAwesome5.EFontAwesomeIcon.Solid_Edit : FontAwesome5.EFontAwesomeIcon.Solid_SlidersH;
             }
             else
+            {
                 if (_folder)
+                {
                     Title = "Create New Mod";
+                    HeaderIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_Plus;
+                }
                 else
+                {
                     Title = "Create New Loadout";
+                    HeaderIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_SlidersH;
+                }
+            }
+
+            Loaded += (s, e) =>
+            {
+                NameBox.Focus();
+                NameBox.SelectAll();
+            };
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

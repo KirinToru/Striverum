@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using System.IO;
 
-namespace Unverum
+namespace Striverum
 {
     public static class HttpClientExtensions
     {

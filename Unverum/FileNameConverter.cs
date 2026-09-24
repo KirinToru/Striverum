@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     public class FileNameConverter : IValueConverter
     {

@@ -1,4 +1,5 @@
-﻿using System;
+using System.Collections.Generic;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,12 +10,12 @@ using System.Text.Json;
 using SharpCompress.Common;
 using System.Text.RegularExpressions;
 using SharpCompress.Readers;
-using Unverum.UI;
+using Striverum.UI;
 using SharpCompress.Archives.SevenZip;
 using System.Linq;
 using SharpCompress.Archives;
 
-namespace Unverum
+namespace Striverum
 {
     public class ModDownloader
     {
@@ -83,23 +84,58 @@ namespace Unverum
                 }
             }
         }
-        public async void Download(string line, bool running)
+        public async Task DownloadAsync(string line, bool running)
         {
-            if (ParseProtocol(line))
+            await Task.Run(async () =>
             {
-                if (await GetData())
+                if (ParseProtocol(line))
                 {
-                    DownloadWindow downloadWindow = new DownloadWindow(response);
-                    downloadWindow.ShowDialog();
-                    if (downloadWindow.YesNo)
+                    if (await GetData())
                     {
-                        await DownloadFile(URL_TO_ARCHIVE, fileName, new Progress<DownloadProgress>(ReportUpdateProgress),
-                            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token));
-                        if (!cancelled)
-                            await ExtractFile(fileName, response.Game.Name.Replace(":", String.Empty), response);
+                        if (response.Game.Id != 11534)
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                MessageBox.Show($"This mod is for {response.Game.Name}, but this version of Striverum only supports Guilty Gear -Strive-.", "Unsupported Game", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            });
+                            if (running)
+                                Environment.Exit(0);
+                            return;
+                        }
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            DownloadWindow downloadWindow = new DownloadWindow(response);
+                            downloadWindow.ShowDialog();
+                            if (downloadWindow.YesNo)
+                            {
+                                _ = DownloadAndExtractAsync(running);
+                            }
+                            else if (running)
+                            {
+                                Environment.Exit(0);
+                            }
+                        });
+                    }
+                    else if (running)
+                    {
+                        Environment.Exit(0);
                     }
                 }
-            }
+                else if (running)
+                {
+                    Environment.Exit(0);
+                }
+            });
+        }
+
+        private async Task DownloadAndExtractAsync(bool running)
+        {
+            await DownloadFile(URL_TO_ARCHIVE, fileName, new Progress<DownloadProgress>(ReportUpdateProgress),
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token));
+            if (!cancelled)
+                await ExtractFile(fileName, response.Game.Name.Replace(":", String.Empty), response);
+            
             if (running)
                 Environment.Exit(0);
         }
@@ -137,7 +173,7 @@ namespace Unverum
         {
             try
             {
-                line = line.Replace("unverum:", "");
+                line = line.Replace("Striverum:", "");
                 string[] data = line.Split(',');
                 URL_TO_ARCHIVE = data[0];
                 // Used to grab file info from dictionary
@@ -228,9 +264,33 @@ namespace Unverum
                             metadata.homepage = record.Link;
                             metadata.avi = record.Owner.Avatar;
                             metadata.upic = record.Owner.Upic;
-                            metadata.cat = record.CategoryName;
+                            metadata.cat = record.RootCategory != null ? record.RootCategory.Name : record.Category.Name;
+                            metadata.subcategory = record.Category != null ? record.Category.Name : "";
+                            metadata.tags = new List<string>();
+                            if (record.RootCategory != null && !string.IsNullOrEmpty(record.RootCategory.Name)) metadata.tags.Add(record.RootCategory.Name);
+                            if (record.Category != null && !string.IsNullOrEmpty(record.Category.Name)) metadata.tags.Add(record.Category.Name);
                             metadata.caticon = record.Category.Icon;
                             metadata.lastupdate = record.DateUpdated;
+                            
+                            if (record.Category != null && record.Category.HasIcon)
+                            {
+                                try
+                                {
+                                    string iconCacheDir = $@"{Global.assemblyLocation}{Global.s}Cache{Global.s}Icons";
+                                    Directory.CreateDirectory(iconCacheDir);
+                                    string iconFileName = Path.GetFileName(record.Category.Icon.LocalPath);
+                                    string cachedIconPath = $@"{iconCacheDir}{Global.s}{iconFileName}";
+                                    if (!File.Exists(cachedIconPath))
+                                    {
+                                        using (HttpClient httpClient = new HttpClient())
+                                        {
+                                            var iconBytes = httpClient.GetByteArrayAsync(record.Category.Icon).Result;
+                                            File.WriteAllBytes(cachedIconPath, iconBytes);
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
                             string metadataString = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                             File.WriteAllText($@"{ArchiveDestination}{Global.s}mod.json", metadataString);
                         }
@@ -324,9 +384,33 @@ namespace Unverum
                             metadata.homepage = record.Link;
                             metadata.avi = record.Owner.Avatar;
                             metadata.upic = record.Owner.Upic;
-                            metadata.cat = record.CategoryName;
+                            metadata.cat = record.RootCategory != null ? record.RootCategory.Name : record.Category.Name;
+                            metadata.subcategory = record.Category != null ? record.Category.Name : "";
+                            metadata.tags = new List<string>();
+                            if (record.RootCategory != null && !string.IsNullOrEmpty(record.RootCategory.Name)) metadata.tags.Add(record.RootCategory.Name);
+                            if (record.Category != null && !string.IsNullOrEmpty(record.Category.Name)) metadata.tags.Add(record.Category.Name);
                             metadata.caticon = record.Category.Icon;
                             metadata.lastupdate = record.DateUpdated;
+                            
+                            if (record.Category != null && record.Category.HasIcon)
+                            {
+                                try
+                                {
+                                    string iconCacheDir = $@"{Global.assemblyLocation}{Global.s}Cache{Global.s}Icons";
+                                    Directory.CreateDirectory(iconCacheDir);
+                                    string iconFileName = Path.GetFileName(record.Category.Icon.LocalPath);
+                                    string cachedIconPath = $@"{iconCacheDir}{Global.s}{iconFileName}";
+                                    if (!File.Exists(cachedIconPath))
+                                    {
+                                        using (HttpClient httpClient = new HttpClient())
+                                        {
+                                            var iconBytes = httpClient.GetByteArrayAsync(record.Category.Icon).Result;
+                                            File.WriteAllBytes(cachedIconPath, iconBytes);
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
                             string metadataString = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                             File.WriteAllText($@"{ArchiveDestination}{Global.s}mod.json", metadataString);
                         }
@@ -409,3 +493,4 @@ namespace Unverum
 
     }
 }
+

@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Media;
@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Reflection;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     /// <summary>
     /// Interaction logic for ChangelogBox.xaml
@@ -32,7 +32,7 @@ namespace Unverum.UI
             }
             else
             {
-                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Unverum;component/Assets/unverumpreview.png"));
+                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
                 PreviewImage.Source = bitmap;
                 PreviewImage.Visibility = Visibility.Visible;
             }

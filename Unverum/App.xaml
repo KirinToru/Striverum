@@ -1,7 +1,7 @@
-﻿<Application x:Class="Unverum.App"
+<Application x:Class="Striverum.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Unverum">
+             xmlns:local="clr-namespace:Striverum">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

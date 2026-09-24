@@ -1,18 +1,18 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System.IO;
 using System.Reflection;
 
-namespace Unverum
+namespace Striverum
 {
     public static class RegistryConfig
     {
         public static bool InstallGBHandler()
         {
             string AppPath = Path.ChangeExtension(Assembly.GetExecutingAssembly().Location, ".exe");
-            string protocolName = $"unverum";
+            string protocolName = $"Striverum";
             try
             {
-                var reg = Registry.CurrentUser.CreateSubKey(@"Software\Classes\Unverum");
+                var reg = Registry.CurrentUser.CreateSubKey(@"Software\Classes\Striverum");
                 reg.SetValue("", $"URL:{protocolName}");
                 reg.SetValue("URL Protocol", "");
                 reg = reg.CreateSubKey(@"shell\open\command");

@@ -1,24 +1,351 @@
-﻿<Window x:Class="Unverum.MainWindow"
+<Window x:Class="Striverum.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:dd="urn:gong-wpf-dragdrop"
         xmlns:fa5="http://schemas.fontawesome.com/icons/"
+        xmlns:local="clr-namespace:Striverum"
         Background="#131313"
-        Title="Unverum" SizeChanged="OnResize"
+        Title="Striverum" SizeChanged="OnResize"
         mc:Ignorable="d" Closing="Window_Closing" WindowStartupLocation="CenterScreen"
         Height="750" Width="1280" MinHeight="750" MinWidth="1280" Loaded="WindowLoaded" KeyDown="Window_KeyDown">
     <Window.Resources>
         <FontFamily x:Key="Monospace">../Assets/#Roboto Mono</FontFamily>
+
+        <!-- Smooth scrolling for all ScrollViewers, ListBoxes, and RichTextBoxes -->
+        <Style TargetType="{x:Type ListBox}">
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="local:SmoothScrollHelper.IsEnabled" Value="True"/>
+        </Style>
+        <Style TargetType="{x:Type ScrollViewer}">
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+            <Setter Property="local:SmoothScrollHelper.IsEnabled" Value="True"/>
+        </Style>
+        <Style TargetType="{x:Type RichTextBox}">
+            <Setter Property="local:SmoothScrollHelper.IsEnabled" Value="True"/>
+        </Style>
+
+        <!-- Compact Rounded / Pill Button Style -->
+        <Style x:Key="RoundedTopButton" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="BorderBrush" Value="#383838"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#333333"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#D32F2F"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Green Launch Button Style -->
+        <Style x:Key="LaunchButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedTopButton}">
+            <Setter Property="Background" Value="#2E7D32"/>
+            <Setter Property="BorderBrush" Value="#4CAF50"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#388E3C"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#81C784"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1B5E20"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#1B5E20"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Compact Rounded ComboBox Style -->
+        <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
+            <Border x:Name="Border" CornerRadius="14" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="22"/>
+                    </Grid.ColumnDefinitions>
+                    <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Data="M 0 0 L 3.5 3.5 L 7 0 Z" Fill="#A0A0A0"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#2A2A2A"/>
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#555555"/>
+                    <Setter TargetName="Arrow" Property="Fill" Value="#FFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#777777"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Border" Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="RoundedTopComboBox" TargetType="{x:Type ComboBox}">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="BorderBrush" Value="#383838"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="Padding" Value="10,0,24,0"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type ComboBoxItem}">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="#F2F2F2"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                                    <Border x:Name="ItemBd" Background="{TemplateBinding Background}" CornerRadius="4" Margin="2,1" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="ItemBd" Property="Background" Value="#383838"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="ItemBd" Property="Background" Value="#454545"/>
+                                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Template="{StaticResource ComboBoxToggleButtonTemplate}"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          Focusable="False"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"/>
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="10,0,24,0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Grid x:Name="DropDown"
+                                      SnapsToDevicePixels="True"
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder"
+                                            Background="#222222"
+                                            BorderBrush="#444444"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Margin="0,4,0,4">
+                                        <ScrollViewer Margin="2,4" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="DropDownBorder" Property="MinHeight" Value="28"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Circular Mod Enable Checkbox Style -->
+        <Style x:Key="ModEnableCheckStyle" TargetType="{x:Type CheckBox}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CheckBox}">
+                        <Border x:Name="Circle" Width="16" Height="16" CornerRadius="8"
+                                Background="#2A2A2A" BorderBrush="#4A4A4A" BorderThickness="1.5"
+                                SnapsToDevicePixels="True">
+                            <Ellipse x:Name="Dot" Width="6" Height="6" Fill="Transparent"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Circle" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Circle" Property="BorderBrush" Value="#E53935"/>
+                                <Setter TargetName="Dot" Property="Fill" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Circle" Property="BorderBrush" Value="#888888"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- NSFW Toggle Pill Button Style -->
+        <Style x:Key="NsfwPillStyle" TargetType="{x:Type CheckBox}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CheckBox}">
+                        <Border x:Name="Bd" Height="28" CornerRadius="14" Background="#222222"
+                                BorderBrush="#383838" BorderThickness="1" Padding="10,2" SnapsToDevicePixels="True">
+                            <TextBlock x:Name="Txt" Text="NSFW" FontWeight="Bold" FontSize="11"
+                                       Foreground="#888888" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#333333"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#555555"/>
+                                <Setter TargetName="Txt" Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#E53935"/>
+                                <Setter TargetName="Txt" Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Round Icon Button Style -->
+        <Style x:Key="RoundIconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="BorderBrush" Value="#383838"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="20" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#383838"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#D32F2F"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Global Hyperlink Style -->
+        <Style TargetType="{x:Type Hyperlink}">
+            <Setter Property="Foreground" Value="#E53935"/>
+            <Setter Property="TextDecorations" Value="Underline"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#FF5252"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <DataTemplate x:Key="ModTemplate">
-            <Border CornerRadius="5" Margin="5">
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#101010" Opacity="0.75"/>
-                </Border.BorderBrush>
-                <Border.Background>
-                    <SolidColorBrush Color="#101010" Opacity="0.75"/>
-                </Border.Background>
+            <Border CornerRadius="8" Margin="5" Cursor="Hand" PreviewMouseLeftButtonUp="ModTile_Click">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#121212"/>
+                        <Setter Property="BorderBrush" Value="#222222"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="BorderBrush" Value="#444444"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid VerticalAlignment="Center" x:Name="GridItem" Margin="3">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -40,10 +367,6 @@
                                         <Setter Property="Visibility" Value="Visible" />
                                         <Setter Property="Text" Value="SPOILER"/>
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding Path=IsNsfw}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Setter Property="Text" Value="NSFW"/>
-                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
@@ -54,9 +377,6 @@
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Path=IsSpoiler}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Path=IsNsfw}" Value="True">
                                         <Setter Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -82,6 +402,13 @@
                             </Style>
                         </Image.Style>
                     </Image>
+                    <!-- 18+ badge on top right of preview for NSFW mods -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,15,12,0" Panel.ZIndex="5"
+                            Background="#D32F2F" CornerRadius="10" MinWidth="22" Height="20" Padding="4,0"
+                            Visibility="{Binding IsNsfw, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                        <TextBlock Text="18+" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                     <Rectangle Height="168" Panel.ZIndex="1" Fill="Black" Stretch="UniformToFill" Margin="5,10,5,5" VerticalAlignment="Center">
                         <Rectangle.OpacityMask>
                             <ImageBrush ImageSource="{Binding Path=Image,Mode=OneWay,IsAsync=True}"/>
@@ -99,7 +426,7 @@
                             <TextBlock Margin="10" Text="{Binding Path=Title}" Foreground="#f2f2f2" FontWeight="Medium" FontSize="18" VerticalAlignment="Center" />
                         </Border>
                     </Popup>
-                    <fa5:ImageAwesome Name="LoadingBar" Foreground="#006ac1" Grid.Row="0" Icon="Solid_Spinner" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
+                    <fa5:ImageAwesome Name="LoadingBar" Foreground="#D32F2F" Grid.Row="0" Icon="Solid_Spinner" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
                     <StackPanel Grid.Row="2" Margin="10,-5,10,5" Orientation="Horizontal">
                         <Image VerticalAlignment="Center" Source="{Binding Path=Owner.Avatar}" Margin="0,0,10,0" Height="35"/>
                         <TextBlock VerticalAlignment="Center" Foreground="#909090" Text="{Binding Path=Owner.Name}">
@@ -333,13 +660,10 @@
                             </TextBlock>
                         </Border>
                     </Popup>
-                    <Grid Grid.Row="7" Margin="5,5,5,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Foreground="#f2f2f2" FontWeight="Medium" Height="30" Width="95" Background="#303030" BorderBrush="#353535" VerticalAlignment="Bottom" Content="More Info" Click="MoreInfo_Click"/>
-                        <Button Grid.Column="1" Foreground="#f2f2f2" FontWeight="Medium" Height="30" Width="95" Background="#303030" BorderBrush="#353535" VerticalAlignment="Top" Content="Download" IsEnabled="{Binding Path=Compatible}" Click="Download_Click"/>
+                    <Grid Grid.Row="7" Margin="5,8,5,10">
+                        <Button HorizontalAlignment="Center" Style="{StaticResource RoundedTopButton}"
+                                Foreground="#f2f2f2" FontWeight="SemiBold" Height="28" Width="130"
+                                Content="Download" IsEnabled="{Binding Path=Compatible}" Click="Download_Click"/>
                     </Grid>
                 </Grid>
             </Border>
@@ -394,11 +718,11 @@
                     </Setter>
                 </Style>
             </TabControl.Resources>
-            <TabItem Name="ModManager" Selector.Selected="OnManagerTabSelected" FontSize="18" HorizontalAlignment="Center" Header="Manage Mods">
+            <TabItem Name="ModManager" Selector.Selected="OnManagerTabSelected" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Header="Manage Mods">
                 <TabItem.Content>
                     <Grid Name="MainGrid">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="50"/>
+                            <RowDefinition Height="40"/>
                             <RowDefinition Height="1.6*" MinHeight="100"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition MinHeight="100"/>
@@ -413,9 +737,8 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox Margin="10,0,0,0" Name="GameBox" Height="35" FontSize="18" Width="65" FontWeight="Medium" SelectionChanged="GameBox_SelectionChanged" DropDownClosed="GameBox_DropDownClosed"
-                                  VerticalContentAlignment="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                            <ComboBoxItem IsSelected="True">
+                        <ComboBox Name="GameBox" Width="0" Height="0" Margin="0" Visibility="Collapsed" SelectionChanged="GameBox_SelectionChanged" DropDownClosed="GameBox_DropDownClosed">
+                            <ComboBoxItem>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Image Source="../Assets/Icons/dbfz.png" Width="27" Margin="4,0,10,0"/>
                                 <TextBlock Text="Dragon Ball FighterZ" VerticalAlignment="Center" FontWeight="Medium"/>
@@ -445,7 +768,7 @@
                                     <TextBlock Text="Granblue Fantasy Versus: Rising" VerticalAlignment="Center" FontWeight="Medium"/>
                                 </StackPanel>
                             </ComboBoxItem>
-                            <ComboBoxItem>
+                            <ComboBoxItem IsSelected="True">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Image Source="../Assets/Icons/ggs.png" Width="27" Margin="4,0,10,0"/>
                                     <TextBlock Text="Guilty Gear -Strive-" VerticalAlignment="Center" FontWeight="Medium"/>
@@ -506,118 +829,309 @@
                                 </StackPanel>
                             </ComboBoxItem>
                         </ComboBox>
-                        <Button FontSize="18" FontWeight="Medium" Name="EditLoadoutsButton" Margin="0,0,10,0" Height="35" HorizontalAlignment="Stretch" VerticalAlignment="Center" Grid.Column="2" Content="Edit Loadouts" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2" Click="EditLoadouts_Click" />
-                        <Button FontSize="18" FontWeight="Medium" Name="ConfigButton" Margin="0,0,10,0" Height="35" HorizontalAlignment="Stretch" VerticalAlignment="Center" Grid.Column="3" Content="Setup" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2" Click="Setup_Click" />
-                        <Button FontSize="18" FontWeight="Medium" Name="LaunchButton" Margin="0,0,10,0" Height="35" VerticalAlignment="Center" HorizontalAlignment="Stretch" Grid.Column="4" Content="Launch" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2" Click="Launch_Click"/>
-                        <Button FontSize="18" FontWeight="Medium" Name="OpenModsButton" Margin="0,0,10,0" Height="35" VerticalAlignment="Center" HorizontalAlignment="Stretch" Grid.Column="6" Content="Add Mods" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2" Click="ModsFolder_Click"/>
-                        <Button FontSize="18" FontWeight="Medium" Name="UpdateButton" Margin="0,0,10,0"  Height="35" VerticalAlignment="Center" HorizontalAlignment="Stretch" Grid.Column="7" Content="Update Mods" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2" Click="Update_Click"/>
+                        <ComboBox Style="{StaticResource RoundedTopComboBox}" Grid.Column="1" Margin="10,0,8,0" Name="LoadoutsBox" SelectionChanged="LoadoutsBox_SelectionChanged"/>
+                        <Button Style="{StaticResource RoundedTopButton}" Name="EditLoadoutsButton" Margin="0,0,8,0" Grid.Column="2" Content="Edit Loadouts" Click="EditLoadouts_Click" />
+                        <Button Style="{StaticResource RoundedTopButton}" Name="ConfigButton" Margin="0,0,8,0" Grid.Column="3" Content="Setup" Click="Setup_Click" />
+                        <Button Style="{StaticResource LaunchButtonStyle}" Name="LaunchButton" Margin="0,0,8,0" Grid.Column="4" Content="Launch" Click="Launch_Click"/>
+                        <ComboBox Style="{StaticResource RoundedTopComboBox}" Grid.Column="5" Margin="0,0,8,0" Name="LauncherOptionsBox" SelectionChanged="LauncherOptionsBox_SelectionChanged"/>
+                        <Button Style="{StaticResource RoundedTopButton}" Name="OpenModsButton" Margin="0,0,8,0" Grid.Column="6" Content="Add Mods" Click="ModsFolder_Click"/>
+                        <Button Style="{StaticResource RoundedTopButton}" Name="UpdateButton" Margin="0,0,10,0" Grid.Column="7" Content="Update Mods" Click="Update_Click"/>
 
-                        <ComboBox Grid.Column="1" Margin="10,0,10,0" Height="35" FontSize="18" FontWeight="Medium" Name="LoadoutsBox" SelectionChanged="LoadoutsBox_SelectionChanged"/>
-                        <ComboBox Grid.Column="5" Margin="0,0,10,0" Height="35" FontSize="18" FontWeight="Medium" Name="LauncherOptionsBox" SelectionChanged="LauncherOptionsBox_SelectionChanged"/>
-
-                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="8">
+                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="8" Margin="0,5,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.8*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="2*" MinWidth="300"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="1*" MinWidth="240" MaxWidth="800"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition />
-                            </Grid.RowDefinitions>
-                            <Grid Visibility="Collapsed" Grid.Row="1" Name="DropBox" Margin="10,5,3,3" Panel.ZIndex="2" DragLeave="Add_Leave" DragEnter="Add_Enter" Drop="Add_Drop" AllowDrop="True" Background="Transparent">
-                                <Border Opacity="0.7" Background="Black"/>
-                                <TextBlock Foreground="#f2f2f2" FontSize="40" Panel.ZIndex="3" VerticalAlignment="Center" HorizontalAlignment="Center">Drop files to create mod</TextBlock>
-                            </Grid>
-                            <Grid Name="ModGridSearchBarGrid" Panel.ZIndex="2" Margin="10,5,3,5" Height="35" VerticalAlignment="Center">
-                                <TextBox Margin="0,0,35,0" Background="#353535" Foreground="#f2f2f2" BorderBrush="#353535" x:Name="ModGrid_SearchBar" KeyDown="ModGrid_SearchBar_KeyDown" Padding="5" TextWrapping="NoWrap"/>
-                                <TextBlock Padding="8,5,5,5" Foreground="#f2f2f2" Panel.ZIndex="3" IsHitTestVisible="False" Height="35"  HorizontalAlignment="Left" Text="Search..." VerticalAlignment="Center">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ElementName=ModGrid_SearchBar, Path=Text.IsEmpty}" Value="False">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <fa5:ImageAwesome Icon="Solid_Times" Foreground="#f2f2f2" HorizontalAlignment="Right" Margin="6,6,40,6" Height="15" PreviewMouseLeftButtonDown="Clear_PreviewMouseLeftButtonDown">
-                                    <fa5:ImageAwesome.Style>
-                                        <Style TargetType="fa5:ImageAwesome">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ElementName=ModGrid_SearchBar, Path=Text.IsEmpty}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding ElementName=ModGrid_SearchBar, Path=Text.IsEmpty}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </fa5:ImageAwesome.Style>
-                                </fa5:ImageAwesome>
-                                <Button HorizontalAlignment="Right" Panel.ZIndex="3" Focusable="False" Click="ModGridSearchButton_Click" Name="ModGridSearchButton" Height="35" Width="35">
-                                    <fa5:ImageAwesome Icon="Solid_Search" Foreground="#f2f2f2" Margin="3"/>
-                                </Button>
-                            </Grid>
-                            <DataGrid Grid.Row="1" DragEnter="Add_Enter" Margin="10,5,3,3" Name="ModGrid" AutoGenerateColumns="False" GridLinesVisibility="None" VerticalScrollBarVisibility="Auto"  BorderBrush="#424242"
-                          EnableColumnVirtualization="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False"
-                          CanUserResizeColumns="False" CanUserResizeRows="False" CanUserSortColumns="False" AlternatingRowBackground="#2A2A2A"
-                          dd:DragDrop.IsDragSource="True" dd:DragDrop.IsDropTarget="True" HeadersVisibility="Column" 
-                          SelectionMode="Extended" RowBackground="#202020" Foreground="#f2f2f2" LoadingRow="ModGrid_LoadingRow" HorizontalScrollBarVisibility="Hidden"
-                          HorizontalAlignment="Center" Background="#202020" Grid.Column="0" FontSize="12" PreviewKeyDown="ModGrid_PreviewKeyDown"
-                          ContextMenuOpening="ModGrid_ContextMenuOpening" SelectionChanged="ModGrid_SelectionChanged">
-                                <DataGrid.Resources>
-                                    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#006ac1"/>
-                                    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#f2f2f2"/>
-                                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#006ac1" />
-                                    <Style BasedOn="{StaticResource {x:Type DataGridColumnHeader}}" TargetType="{x:Type DataGridColumnHeader}">
-                                        <Setter Property="Background" Value="#303030" />
-                                        <Setter Property="Foreground" Value="#f2f2f2"/>
-                                        <Setter Property="Height" Value="17"/>
-                                        <Setter Property="FontSize" Value="12"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                    </Style>
-                                </DataGrid.Resources>
-				<DataGrid.ColumnHeaderStyle>
-					<Style TargetType="DataGridColumnHeader">
-						<Setter Property="Background" Value="#303030" />
-						<Setter Property="Foreground" Value="#f2f2f2"/>
-						<Setter Property="Height" Value="17"/>
-						<Setter Property="FontSize" Value="12"/>
-						<Setter Property="FontWeight" Value="SemiBold"/>
-                        <EventSetter Event="Click" Handler="SortAlphabeticallyAndGroupEnabled_Click"/>
-                    </Style>
-				</DataGrid.ColumnHeaderStyle>
-                                <DataGrid.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Fetch Metadata" IsCheckable="False" Click="FetchItem_Click"/>
-                                        <MenuItem Header="Rename Mod" IsCheckable="False" Click="EditItem_Click"/>
-                                        <MenuItem Header="Configure Paks" IsCheckable="False" Click="ConfigurePaksItem_Click"/>
-                                        <MenuItem Header="Open Mod Folder" IsCheckable="False" Click="OpenItem_Click"/>
-                                        <MenuItem Header="Delete Mod" IsCheckable="False" Click="DeleteItem_Click"/>
-                                    </ContextMenu>
-                                </DataGrid.ContextMenu>
-                                <DataGrid.Columns>
-                                    <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding enabled, Mode=TwoWay}" IsReadOnly="False" Width="52">
-                                        <DataGridCheckBoxColumn.CellStyle>
-                                            <Style TargetType="DataGridCell">
-                                                <EventSetter Event="CheckBox.Checked" Handler="OnChecked"/>
-                                                <EventSetter Event="CheckBox.Unchecked" Handler="OnUnchecked"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="IsEditing" Value="True" />
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </DataGridCheckBoxColumn.CellStyle>
-                                    </DataGridCheckBoxColumn>
-                                    <DataGridTextColumn Header="Name" Binding="{Binding name, Mode=TwoWay}" IsReadOnly="True" Width="1.5*"/>
-                                </DataGrid.Columns>
 
-                            </DataGrid>
-                            <GridSplitter Grid.Column="1" Grid.RowSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="10" Background="Transparent"/>
-                            <Grid Grid.Column="2" Grid.RowSpan="2">
+                            <!-- Sidebar Panel -->
+                            <Border Grid.Column="0" Background="#1A1A1A" BorderThickness="0,0,1,0" BorderBrush="#2C2C2C">
+                                <Grid x:Name="SidebarContainer" Width="64" ClipToBounds="True">
+                                    <!-- Section Sidebar (thin vertical icon bar) -->
+                                    <Grid x:Name="SectionPanel" Width="64" HorizontalAlignment="Left">
+                                        <Grid.RenderTransform>
+                                            <TranslateTransform x:Name="SectionPanelTranslate" X="0"/>
+                                        </Grid.RenderTransform>
+                                        <ListBox x:Name="SectionSidebar" Background="Transparent" BorderThickness="0"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 SelectionMode="Single"
+                                                 PreviewMouseLeftButtonUp="SectionSidebar_ItemClicked">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Padding" Value="4,6"/>
+                                                    <Setter Property="Margin" Value="4,4,4,0"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <Border x:Name="Bd" CornerRadius="8" Background="Transparent" Padding="4">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#333333"/>
+                                                                    </Trigger>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsActive}" Value="True"/>
+                                                                            <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#B71C1C"/>
+                                                                    </MultiDataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid HorizontalAlignment="Center" ToolTip="{Binding Name}" Margin="0,3">
+                                                        <Border CornerRadius="7" Width="28" Height="28" Background="#262626" HorizontalAlignment="Center">
+                                                            <Grid>
+                                                                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="2"
+                                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                                       Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                                <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="14" Width="14"
+                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                  Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <!-- Mod count dot on bottom right of section icon (grey pill, white text) -->
+                                                        <Border Background="#383838" BorderBrush="#555555" BorderThickness="1" CornerRadius="6" MinWidth="13" Height="13" Padding="2,0"
+                                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"
+                                                                Visibility="{Binding HasMods, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                                                            <TextBlock Text="{Binding ModCount}" FontSize="8" FontWeight="Bold" Foreground="#FFFFFF"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+
+                                    <!-- Category Sidebar (slides over sections) -->
+                                    <Grid x:Name="CategoryPanel" Width="190" HorizontalAlignment="Left" Visibility="Collapsed" Opacity="0">
+                                        <Grid.RenderTransform>
+                                            <TranslateTransform x:Name="CategoryPanelTranslate" X="190"/>
+                                        </Grid.RenderTransform>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Border Grid.Row="0" Background="#202020" Padding="12,10" BorderThickness="0,0,0,1" BorderBrush="#2F2F2F">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Grid Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <Image x:Name="CategoryHeaderImage" Stretch="Uniform" Width="18" Height="18"
+                                                           RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
+                                                    <fa5:ImageAwesome x:Name="CategoryHeaderIcon" Icon="Solid_Tshirt" Height="14" Width="14" Foreground="#D32F2F"/>
+                                                </Grid>
+                                                <TextBlock x:Name="CategoryHeader" Text="Categories" Foreground="#f2f2f2" FontWeight="Bold" FontSize="13"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <ListBox Grid.Row="1" x:Name="CategorySidebar" Background="Transparent" BorderThickness="0"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 SelectionMode="Single"
+                                                 PreviewMouseLeftButtonUp="CategorySidebar_ItemClicked">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="8,5"/>
+                                                    <Setter Property="Margin" Value="4,2,4,0"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <Border x:Name="Bd" CornerRadius="6" Background="Transparent" Padding="8,5">
+                                                                    <ContentPresenter VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#333333"/>
+                                                                    </Trigger>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsActive}" Value="True"/>
+                                                                            <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter TargetName="Bd" Property="Background" Value="#B71C1C"/>
+                                                                    </MultiDataTrigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" CornerRadius="7" Width="28" Height="28" Background="#282828" Margin="0,0,8,0">
+                                                            <Grid>
+                                                                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="2"
+                                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                                       Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                                <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#CCCCCC" Height="14" Width="14"
+                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                  Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#E0E0E0" FontSize="12"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        <!-- Category count badge (grey, not red) -->
+                                                        <Border Grid.Column="2" Background="#383838" BorderBrush="#555555" BorderThickness="1" CornerRadius="6" MinWidth="16" Height="14" Padding="4,0"
+                                                                Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                Visibility="{Binding HasMods, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                                                            <TextBlock Text="{Binding ModCount}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <!-- Return Arrow Button (Always Visible at bottom) -->
+                                        <Border Grid.Row="2" Background="#1C1C1C" BorderThickness="0,1,0,0" BorderBrush="#2C2C2C" Padding="6">
+                                            <Button x:Name="BackButton" Style="{StaticResource RoundedTopButton}" Height="30" Click="BackButton_Click">
+                                                <TextBlock Text="&lt;" Foreground="#D32F2F" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
+                                            </Button>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- Mod List -->
+                            <ListBox Grid.Column="1" x:Name="ModListView" Background="#181818" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0"
+                                     HorizontalContentAlignment="Stretch"
+                                     SelectionChanged="ModGrid_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Margin" Value="6,3,6,0"/>
+                                        <Setter Property="Padding" Value="10,8"/>
+                                        <Setter Property="Background" Value="#242424"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                                            Padding="{TemplateBinding Padding}" CornerRadius="6">
+                                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#3A3A3A"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#4C4C4C"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#2A2A2A"/>
+                                                        </Trigger>
+                                                        <MultiTrigger>
+                                                            <MultiTrigger.Conditions>
+                                                                <Condition Property="IsSelected" Value="True"/>
+                                                                <Condition Property="IsMouseOver" Value="True"/>
+                                                            </MultiTrigger.Conditions>
+                                                            <Setter TargetName="Bd" Property="Background" Value="#484848"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#5C5C5C"/>
+                                                        </MultiTrigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid MinHeight="38">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0" Style="{StaticResource ModEnableCheckStyle}"
+                                                      IsChecked="{Binding enabled, Mode=TwoWay}"
+                                                      Checked="OnChecked" Unchecked="OnUnchecked"
+                                                      VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding name}" Foreground="#f2f2f2" FontWeight="SemiBold" FontSize="13"/>
+                                                <TextBlock Text="{Binding subcategory}" Foreground="#888" FontSize="11" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Tag bubbles (icons in small circles on bottom right) -->
+                                            <ItemsControl Grid.Column="2" ItemsSource="{Binding TagItems}" VerticalAlignment="Center" Margin="6,0,0,0">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Cursor="Hand" Click="TagBubble_Click" Tag="{Binding Name}" Margin="3,0"
+                                                                ToolTip="{Binding Name}" FocusVisualStyle="{x:Null}">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="TagCircle" CornerRadius="13" Width="26" Height="26"
+                                                                            Background="#383838" BorderBrush="#4A4A4A" BorderThickness="1"
+                                                                            SnapsToDevicePixels="True" ClipToBounds="True">
+                                                                        <Grid>
+                                                                            <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="3"
+                                                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                                                   Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                                            <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="12" Width="12"
+                                                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                              Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#4A4A4A"/>
+                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#606060"/>
+                                                                        </Trigger>
+                                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#D32F2F"/>
+                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#D32F2F"/>
+                                                                        </DataTrigger>
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition Binding="{Binding IsActive}" Value="True"/>
+                                                                                <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                            </MultiDataTrigger.Conditions>
+                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#EF5350"/>
+                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#EF5350"/>
+                                                                        </MultiDataTrigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <GridSplitter Grid.Column="2" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#262626" Cursor="SizeWE" ShowsPreview="False" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns"/>
+
+                            <!-- Preview Area -->
+                            <Grid Grid.Column="3">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="1.5*"/>
                                     <RowDefinition/>
@@ -628,11 +1142,9 @@
                                         <BlurBitmapEffect Radius="40"/>
                                     </Image.BitmapEffect>
                                 </Image>
-
-                                <fa5:ImageAwesome Foreground="#006ac1" Grid.Row="0" Icon="Solid_Spinner" Height="50" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
-                                <RichTextBox FontSize="12" Padding="10" Grid.Row="1" Margin="3,5,10,3" Name="DescriptionWindow" Foreground="#F2F2F2" Background="#202020" BorderBrush="#424242" ClipToBounds="False"
-                     VerticalContentAlignment="Center" VerticalAlignment="Stretch" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Grid.ColumnSpan="5" IsDocumentEnabled="True"
-                             FontWeight="Medium"/>
+                                <RichTextBox FontSize="12" Padding="10" Grid.Row="1" Margin="3,5,10,3" Name="DescriptionWindow"
+                                             Foreground="#F2F2F2" Background="#202020" BorderBrush="#424242"
+                                             VerticalScrollBarVisibility="Auto" IsReadOnly="True" IsDocumentEnabled="True" FontWeight="Medium"/>
                             </Grid>
                         </Grid>
                         <GridSplitter Grid.Row="2" Grid.ColumnSpan="6" HorizontalAlignment="Stretch" Height="10" Background="Transparent" />
@@ -647,341 +1159,460 @@
                     </Grid>
                 </TabItem.Content>
             </TabItem>
-            <TabItem Name="ModBrowser" Selector.Selected="OnBrowserTabSelected" FontSize="18" HorizontalAlignment="Center" Header="Browse Mods">
+            <TabItem Name="ModBrowser" Selector.Selected="OnBrowserTabSelected" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Header="Browse Mods">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="50"/>
-                        <RowDefinition/>
-                        <RowDefinition Height="50"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="0.55*"/>
-                        <ColumnDefinition Width="1.2*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="1.85*"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="0.65*"/>
-                        <ColumnDefinition Width="0.4*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid Grid.RowSpan="3" Grid.ColumnSpan="8" Name="MediaPanel" Panel.ZIndex="5" Visibility="Collapsed">
+
+                    <!-- Media Panel Overlay (Lightbox) -->
+                    <Grid Grid.RowSpan="3" Name="MediaPanel" Panel.ZIndex="100" Visibility="Collapsed">
                         <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition Height="90"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Border Grid.RowSpan="4" Grid.ColumnSpan="2" Panel.ZIndex="-1">
-                            <Border.BorderBrush>
-                                <SolidColorBrush Color="#080808" Opacity="0.95"/>
-                            </Border.BorderBrush>
-                            <Border.Background>
-                                <SolidColorBrush Color="#080808" Opacity="0.95"/>
-                            </Border.Background>
-                        </Border>
-                        <Border>
-                            <StackPanel Margin="10" Name="BigImagePanel" VerticalAlignment="Center" Grid.Row="0">
-                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="0.15*"/>
-                                        <ColumnDefinition/>
-                                        <ColumnDefinition Width="0.15*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="ImageLeft_Click" Name="BigImageLeft" Content="&lt;" Height="50" Width="50" FontWeight="SemiBold" FontSize="20"/>
-                                    <Image Grid.Column="1" Name="BigScreenshot" Stretch="Uniform" Margin="20,0,20,0" VerticalAlignment="Center"/>
-                                    <fa5:ImageAwesome Panel.ZIndex="-1" Grid.Column="1" Foreground="#006ac1" Icon="Solid_Spinner" Height="40" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
-                                    <Button Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Click="ImageRight_Click" Name="BigImageRight" Content=">" Height="50" Width="50" FontWeight="SemiBold" FontSize="20"/>
+                        <!-- Darkened background: click to close -->
+                        <Border Grid.RowSpan="2" Background="#0A0A0A" Opacity="0.96" Cursor="Hand" PreviewMouseLeftButtonUp="CloseMedia_Click"/>
+
+                        <!-- Close button top right -->
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,24,0" Panel.ZIndex="10"
+                                Click="CloseMedia_Click" Style="{StaticResource RoundIconButtonStyle}" Height="36" Width="36" ToolTip="Close (Esc)">
+                            <fa5:ImageAwesome Icon="Solid_Times" Foreground="#F2F2F2" Height="14" Width="14"/>
+                        </Button>
+
+                        <!-- Main Enlarged Image & Navigation -->
+                        <Grid Grid.Row="0" Margin="20,40,20,10" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center" Click="ImageLeft_Click" Name="BigImageLeft"
+                                    Style="{StaticResource RoundIconButtonStyle}" Height="44" Width="44" Margin="12,0" Panel.ZIndex="10">
+                                <fa5:ImageAwesome Icon="Solid_ChevronLeft" Foreground="#FFFFFF" Height="16" Width="16"/>
+                            </Button>
+                            <Border Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="8" ClipToBounds="True" Background="#111111">
+                                <Grid>
+                                    <fa5:ImageAwesome Foreground="#D32F2F" Icon="Solid_Spinner" Height="40" Width="40" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
+                                    <Image Name="BigScreenshot" Stretch="Uniform" VerticalAlignment="Center" MaxHeight="600"/>
                                 </Grid>
-                                <TextBlock Name="BigCaptionText" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Row="2" FontSize="18" Foreground="#f2f2f2" Padding="5"/>
+                            </Border>
+                            <Button Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Click="ImageRight_Click" Name="BigImageRight"
+                                    Style="{StaticResource RoundIconButtonStyle}" Height="44" Width="44" Margin="12,0" Panel.ZIndex="10">
+                                <fa5:ImageAwesome Icon="Solid_ChevronRight" Foreground="#FFFFFF" Height="16" Width="16"/>
+                            </Button>
+                        </Grid>
+
+                        <!-- Bottom Caption Bar -->
+                        <Border Grid.Row="1" Background="#141414" BorderBrush="#2C2C2C" BorderThickness="0,1,0,0" Padding="20,12" Margin="0">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Name="BigImageTitle" FontSize="13" FontWeight="Bold" Foreground="#FFFFFF" HorizontalAlignment="Center" Margin="0,0,0,3"/>
+                                <TextBlock Name="BigCaptionText" FontSize="12" Foreground="#CCCCCC" TextWrapping="Wrap" MaxWidth="800" TextAlignment="Center" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                            <StackPanel Grid.ColumnSpan="2" Margin="20" Orientation="Horizontal" Grid.Row="3" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Click="CloseMedia_Click" Content="Close" Height="50" Width="200" FontSize="20" FontWeight="SemiBold" Foreground="#f2f2f2">
-                                <Button.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="2"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                        </StackPanel>
                     </Grid>
-                    <Grid Grid.ColumnSpan="8" Grid.RowSpan="3" Name="DescPanel" Panel.ZIndex="4" Visibility="Collapsed">
+
+                    <!-- Description Panel Overlay (Cover-flow gallery on top, text on bottom, solid opaque background) -->
+                    <Grid Grid.RowSpan="3" Name="DescPanel" Panel.ZIndex="4" Visibility="Collapsed">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="2"/>
-                            <RowDefinition/>
-                            <RowDefinition Height="90"/>
+                            <RowDefinition Height="1"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="1"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.RowSpan="4" Grid.ColumnSpan="2" Panel.ZIndex="-1">
-                            <Border.BorderBrush>
-                                <SolidColorBrush Color="#080808" Opacity="0.95"/>
-                            </Border.BorderBrush>
-                            <Border.Background>
-                                <SolidColorBrush Color="#080808" Opacity="0.95"/>
-                            </Border.Background>
+                        <!-- Solid Non-Transparent Background -->
+                        <Border Grid.RowSpan="6" Background="#141414"/>
+
+                        <!-- Header Row 0: Title and Submitter Info -->
+                        <DockPanel Grid.Row="0" Margin="16,10,16,10" LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Click="CloseDesc_Click" Style="{StaticResource RoundIconButtonStyle}" Width="28" Height="28" Margin="8,0,0,0">
+                                <fa5:ImageAwesome Icon="Solid_Times" Foreground="#AAAAAA" Height="12" Width="12"/>
+                            </Button>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="{Binding Path=Title}" TextTrimming="CharacterEllipsis" Foreground="#F2F2F2" FontWeight="Bold" FontSize="18"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="By " Foreground="#888888" FontSize="12"/>
+                                    <TextBlock Text="{Binding Path=Owner.Name}" Foreground="#D32F2F" FontWeight="SemiBold" FontSize="12"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Divider -->
+                        <Border Grid.Row="1" Background="#262626"/>
+
+                        <!-- Top Gallery Cover-Flow (Row 2): All images visible horizontally; selected is centered, bright, and larger -->
+                        <Grid x:Name="ImagePanel" Grid.Row="2" Background="#181818" MinHeight="170" MaxHeight="245" Margin="0" Visibility="Collapsed">
+                            <!-- Left Navigation Button -->
+                            <Button HorizontalAlignment="Left" VerticalAlignment="Center" Click="ImageLeft_Click" Name="ImageLeft"
+                                    Style="{StaticResource RoundIconButtonStyle}" Height="34" Width="34" Margin="12,0" Panel.ZIndex="10">
+                                <fa5:ImageAwesome Icon="Solid_ChevronLeft" Foreground="#FFFFFF" Height="12" Width="12"/>
+                            </Button>
+
+                            <!-- Gallery Carousel Container (Shows all images horizontally, selected is centered) -->
+                            <ScrollViewer x:Name="GalleryScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                                          Focusable="False" PanningMode="HorizontalOnly" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                <ItemsControl x:Name="GalleryItemsControl">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="6,6" CornerRadius="8" Cursor="Hand" PreviewMouseLeftButtonUp="GalleryItem_Click"
+                                                    BorderThickness="1" SnapsToDevicePixels="True">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                        <Setter Property="Height" Value="135"/>
+                                                        <Setter Property="Width" Value="210"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#D32F2F"/>
+                                                                <Setter Property="Opacity" Value="1.0"/>
+                                                                <Setter Property="Height" Value="180"/>
+                                                                <Setter Property="Width" Value="290"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid ClipToBounds="True">
+                                                    <Image Source="{Binding ImageUrl}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <!-- Right Navigation Button -->
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="ImageRight_Click" Name="ImageRight"
+                                    Style="{StaticResource RoundIconButtonStyle}" Height="34" Width="34" Margin="12,0" Panel.ZIndex="10">
+                                <fa5:ImageAwesome Icon="Solid_ChevronRight" Foreground="#FFFFFF" Height="12" Width="12"/>
+                            </Button>
+
+                            <!-- Bottom caption text -->
+                            <TextBlock Name="CaptionText" VerticalAlignment="Bottom" HorizontalAlignment="Center" FontSize="11" Foreground="#BBBBBB" Margin="0,0,0,4" Panel.ZIndex="5"/>
+                            <Image x:Name="Screenshot" Visibility="Collapsed"/>
+                        </Grid>
+
+                        <!-- Divider -->
+                        <Border Grid.Row="3" Background="#262626"/>
+
+                        <!-- Text Description on Bottom (Row 4) -->
+                        <RichTextBox Margin="16,10" Name="DescText" Grid.Row="4" Background="Transparent" BorderThickness="0"
+                                     IsDocumentEnabled="True" VerticalScrollBarVisibility="Auto" IsReadOnly="True"
+                                     Foreground="#E0E0E0" Padding="6" FontSize="13"/>
+
+                        <!-- Action Buttons Bar (Row 5) -->
+                        <Border Grid.Row="5" Background="#181818" BorderThickness="0,1,0,0" BorderBrush="#252525" Padding="16,10">
+                            <DockPanel LastChildFill="False">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Name="AltButton" Click="AltDownload_Click" Content="Alt. Downloads" IsEnabled="{Binding Path=Compatible}" Margin="0,0,8,0"
+                                            Style="{StaticResource RoundedTopButton}" Height="30" Width="120" FontSize="12"/>
+                                    <Button Name="DownloadButton" Click="Download_Click" Content="Download" IsEnabled="{Binding Path=Compatible}" Margin="0,0,8,0"
+                                            Style="{StaticResource LaunchButtonStyle}" Height="30" Width="120" FontSize="12"/>
+                                    <Button Name="HomepageButton" Click="Homepage_Click" Margin="0,0,8,0"
+                                            Style="{StaticResource RoundedTopButton}" Height="30" Width="120" FontSize="12"/>
+                                    <Button Click="CloseDesc_Click" Content="Close"
+                                            Style="{StaticResource RoundedTopButton}" Height="30" Width="90" FontSize="12"/>
+                                </StackPanel>
+                            </DockPanel>
                         </Border>
-                        <Border Grid.ColumnSpan="2" BorderThickness="0">
-                            <TextBlock Grid.ColumnSpan="2" VerticalAlignment="Center" Text="{Binding Path=Title}" TextTrimming="WordEllipsis" Foreground="#f2f2f2" FontWeight="SemiBold" FontSize="40" Padding="6,3,3,3"/>
-                        </Border>
-                        <StackPanel Name="ImagePanel" Visibility="Collapsed" VerticalAlignment="Center" Grid.Column="1" Grid.Row="2">
-                            <Grid HorizontalAlignment="Center" >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="0.15*"/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition Width="0.15*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="ImageLeft_Click" Name="ImageLeft" Content="&lt;" Height="50" Width="50" FontWeight="SemiBold" FontSize="20"/>
-                                <Image Grid.Column="1" Cursor="Hand" PreviewMouseLeftButtonDown="Image_Click" Name="Screenshot" Stretch="Uniform" MaxHeight="400" Margin="20,0,20,0" VerticalAlignment="Center"/>
-                                <fa5:ImageAwesome Panel.ZIndex="-1" Grid.Column="1" Foreground="#006ac1" Icon="Solid_Spinner" Height="40" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
-                                <Button Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Click="ImageRight_Click" Name="ImageRight" Content=">" Height="50" Width="50" FontWeight="SemiBold" FontSize="20"/>
-                            </Grid>
-                            <TextBlock Name="CaptionText" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Row="2" FontSize="18" Foreground="#f2f2f2" Padding="5"/>
-                        </StackPanel>
-                        <Border Grid.Row="1" Grid.ColumnSpan="2" Background="#404040"/>
-                        <RichTextBox Margin="5" Name="DescText" Grid.Row="2" Background="Transparent" BorderThickness="0" IsDocumentEnabled="True" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Foreground="#f2f2f2" Padding="10,0,10,10" FontSize="18"/>
-                        <StackPanel Grid.ColumnSpan="2" Margin="20" Orientation="Horizontal" Grid.Row="3" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Name="AltButton" Click="AltDownload_Click" Content="Alt. Downloads" IsEnabled="{Binding Path=Compatible}" Margin="0,0,20,0" Height="50" Width="200" FontSize="20" FontWeight="SemiBold" Foreground="#f2f2f2">
-                                <Button.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="2"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                            <Border Name="DownloadButton" Margin="0,0,20,0" Height="50" Width="200" CornerRadius="2" Background="#006ac1">
-                                <Button Margin="3" Click="Download_Click" Content="Download" IsEnabled="{Binding Path=Compatible}" FontSize="20" FontWeight="SemiBold" Foreground="#f2f2f2">
-                                    <Button.Resources>
-                                        <Style TargetType="{x:Type Border}">
-                                            <Setter Property="CornerRadius" Value="2"/>
-                                        </Style>
-                                    </Button.Resources>
-                                </Button>
-                            </Border>
-                            <Button Name="HomepageButton" Click="Homepage_Click" Margin="0,0,20,0" Height="50" Width="200" FontSize="20" FontWeight="SemiBold" Foreground="#f2f2f2">
-                                <Button.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="2"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                            <Button Click="CloseDesc_Click" Content="Close" Height="50" Width="200" FontSize="20" FontWeight="SemiBold" Foreground="#f2f2f2">
-                                <Button.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="2"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                        </StackPanel>
                     </Grid>
-                    <ComboBox Margin="10,0,0,0" IsEnabled="False" Name="GameFilterBox" Height="35" Width="60" HorizontalAlignment="Stretch" FontSize="18" FontWeight="Medium" SelectionChanged="GameFilterSelectionChanged">
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/dbfz.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Dragon Ball FighterZ" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/DBSZ.jpg" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Dragon Ball Sparking! ZERO" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/mhoj2.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="My Hero One's Justice 2" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/gbvs.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Granblue Fantasy: Versus" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/GBVSR.jpg" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Granblue Fantasy Versus: Rising" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/ggs.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Guilty Gear -Strive-" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/jf.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Jump Force" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/kh3.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Kingdom Hearts III" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/sn.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Scarlet Nexus" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/toa.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Tales of Arise" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/ds.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Demon Slayer" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/im.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="IDOLM@STER" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/smtv.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="Shin Megami Tensei V" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/KOFXV.jpg" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="The King of Fighters XV" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                        <ComboBoxItem>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Image Source="../Assets/Icons/dnf.png" Width="27" Margin="4,0,10,0"/>
-                                <TextBlock Text="DNF Duel" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </ComboBoxItem>
-                    </ComboBox>
-                    <ComboBox Margin="5,0,0,0" Grid.Column="1" IsEnabled="False" Name="FilterBox" Height="35" MinWidth="130" HorizontalAlignment="Stretch" FontSize="18"  FontWeight="Medium" SelectionChanged="FilterSelectionChanged"/>
-                    <ComboBox Margin="5,0,0,0" Grid.Column="2" IsEnabled="False" FontWeight="Medium" FontSize="18" Name="TypeBox" Height="35" HorizontalAlignment="Stretch" MinWidth="100" SelectionChanged="TypeFilterSelectionChanged">
-                        <ComboBoxItem xml:space="preserve" IsSelected="True">Mods</ComboBoxItem>
-                        <ComboBoxItem xml:space="preserve">WiPs</ComboBoxItem>
-                        <ComboBoxItem xml:space="preserve">Sounds</ComboBoxItem>
-                        </ComboBox>
-                    <ComboBox Margin="5,0,0,0" Grid.Column="3" IsEnabled="False" Name="CatBox" Height="35" HorizontalAlignment="Stretch" MinWidth="150" SelectionChanged="MainFilterSelectionChanged">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate >
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Margin="0,0,5,0" VerticalAlignment="Center" Height="25" Source="{Binding Path=Icon}"/>
-                                    <TextBlock VerticalAlignment="Center" FontSize="15" FontWeight="Medium" Text="{Binding Path=Name}"/>
+
+                    <!-- Top Toolbar Row 0: Search, NSFW, Sort, Refresh | Pagination -->
+                    <DockPanel Grid.Row="0" Margin="10,8,10,4" LastChildFill="False">
+                        <!-- Left controls -->
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Search Bar (Rounded pill) -->
+                            <Grid Width="220" Height="28" Margin="0,0,8,0">
+                                <TextBox Name="SearchBar" Style="{x:Null}" Height="28"
+                                         Background="#222222" Foreground="#F2F2F2" BorderBrush="#383838" BorderThickness="1"
+                                         Padding="10,0,28,0" VerticalContentAlignment="Center" FontSize="12"
+                                         IsEnabled="False" KeyDown="SearchBar_KeyDown">
+                                    <TextBox.Resources>
+                                        <Style TargetType="{x:Type Border}">
+                                            <Setter Property="CornerRadius" Value="14"/>
+                                        </Style>
+                                    </TextBox.Resources>
+                                </TextBox>
+                                <TextBlock Margin="12,0,28,0" IsHitTestVisible="False" VerticalAlignment="Center"
+                                           Text="Search mods..." Foreground="#777777" FontSize="12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=SearchBar, Path=Text.IsEmpty}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" Click="SearchButton_Click" Name="SearchButton"
+                                        Width="26" Height="26" Margin="0,1,1,1" IsEnabled="False"
+                                        Style="{StaticResource RoundIconButtonStyle}" Background="Transparent" BorderThickness="0">
+                                    <fa5:ImageAwesome Icon="Solid_Search" Foreground="#A0A0A0" Height="11" Width="11"/>
+                                </Button>
+                            </Grid>
+
+                            <!-- NSFW Pill Toggle -->
+                            <CheckBox Name="NSFWCheckbox" Style="{StaticResource NsfwPillStyle}"
+                                      IsEnabled="False" Margin="0,0,8,0" VerticalAlignment="Center"
+                                      Unchecked="NSFWCheckbox_Checked" Checked="NSFWCheckbox_Checked"/>
+
+                            <!-- Filter/Sort Dropdown -->
+                            <ComboBox Name="FilterBox" Style="{StaticResource RoundedTopComboBox}"
+                                      Width="130" Height="28" Margin="0,0,8,0" IsEnabled="False"
+                                      SelectionChanged="FilterSelectionChanged"/>
+
+                            <!-- Refresh/ClearCache Button -->
+                            <Button Name="ClearCacheButton" Style="{StaticResource RoundIconButtonStyle}"
+                                    Width="28" Height="28" Margin="0,0,8,0" ToolTip="Refresh"
+                                    IsEnabled="False" Click="ClearCache">
+                                <fa5:ImageAwesome Icon="Solid_SyncAlt" Foreground="#CCCCCC" Height="12" Width="12"/>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Right controls: Pagination -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Name="PageLeft" Style="{StaticResource RoundIconButtonStyle}"
+                                    Width="28" Height="28" Margin="0,0,6,0" IsEnabled="False"
+                                    Click="DecrementPage">
+                                <fa5:ImageAwesome Icon="Solid_ChevronLeft" Foreground="#CCCCCC" Height="10" Width="10"/>
+                            </Button>
+                            <TextBlock Name="Page" Text="Page 1" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12"
+                                       VerticalAlignment="Center" Margin="4,0,8,0"/>
+                            <Button Name="PageRight" Style="{StaticResource RoundIconButtonStyle}"
+                                    Width="28" Height="28" Margin="0,0,8,0" IsEnabled="False"
+                                    Click="IncrementPage">
+                                <fa5:ImageAwesome Icon="Solid_ChevronRight" Foreground="#CCCCCC" Height="10" Width="10"/>
+                            </Button>
+                            <ComboBox Name="PageBox" Style="{StaticResource RoundedTopComboBox}"
+                                      Width="65" Height="28" IsEnabled="False"
+                                      SelectionChanged="PageBox_SelectionChanged"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <!-- Top Toolbar Row 1: Horizontal Filter Bar (Sections & Subcategories) + Per Page + GameBanana -->
+                    <DockPanel Grid.Row="1" Margin="10,0,10,8" LastChildFill="True">
+                        <!-- Right controls: Per Page + GameBanana + Hidden Legacy ComboBoxes -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Hidden ComboBoxes kept for logic state bindings -->
+                            <ComboBox Name="TypeBox" Visibility="Collapsed" SelectionChanged="TypeFilterSelectionChanged">
+                                <ComboBoxItem xml:space="preserve" IsSelected="True">Mods</ComboBoxItem>
+                                <ComboBoxItem xml:space="preserve">WiPs</ComboBoxItem>
+                                <ComboBoxItem xml:space="preserve">Sounds</ComboBoxItem>
+                            </ComboBox>
+                            <ComboBox Name="CatBox" Visibility="Collapsed" SelectionChanged="MainFilterSelectionChanged"/>
+                            <ComboBox Name="SubCatBox" Visibility="Collapsed" SelectionChanged="SubFilterSelectionChanged"/>
+                            <!-- Hidden GameFilterBox kept for code-behind bindings -->
+                            <ComboBox Margin="0" Width="0" Height="0" Visibility="Collapsed" IsEnabled="False" Name="GameFilterBox" SelectionChanged="GameFilterSelectionChanged">
+                                <ComboBoxItem>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image Source="../Assets/Icons/ggs.png" Width="27" Margin="4,0,10,0"/>
+                                        <TextBlock Text="Guilty Gear -Strive-" VerticalAlignment="Center" FontWeight="Medium"/>
                                     </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    <ComboBox Margin="5,0,0,0" Grid.Column="4" IsEnabled="False" Name="SubCatBox" Height="35" HorizontalAlignment="Stretch" MinWidth="200" SelectionChanged="SubFilterSelectionChanged">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate >
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image Margin="0,0,5,0" VerticalAlignment="Center" Height="25" Source="{Binding Path=Icon}"/>
-                                    <TextBlock VerticalAlignment="Center" FontSize="15" FontWeight="Medium" Text="{Binding Path=Name}"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    <TextBox Margin="5,0,35,0" Background="#353535" Foreground="#f2f2f2" BorderBrush="#353535" Padding="4,0,0,0" Grid.Column="5" IsEnabled="False" KeyDown="SearchBar_KeyDown" Name="SearchBar" Height="35" MinWidth="200" HorizontalAlignment="Stretch" VerticalContentAlignment="Center"/>
-                    <TextBlock Margin="5,0,35,0" Padding="7,5.5,3,3" Grid.Column="5" IsHitTestVisible="False" Height="35" MinWidth="200" HorizontalAlignment="Left" Text="Search..." VerticalAlignment="Center" Foreground="#f2f2f2">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ElementName=SearchBar, Path=Text.IsEmpty}" Value="False">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <Button Grid.Column="5" IsEnabled="False" HorizontalAlignment="Right" Click="SearchButton_Click" Name="SearchButton" Height="35" Width="35">
-                            <fa5:ImageAwesome Icon="Solid_Search" Foreground="#f2f2f2" Margin="3"/>
-                        </Button>
-                    <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5,0,0,0" >
-                        <CheckBox Name="NSFWCheckbox" IsEnabled="False" Unchecked="NSFWCheckbox_Checked" Checked="NSFWCheckbox_Checked"  Margin="0,0,5,0" VerticalAlignment="Center" />
-                        <TextBlock Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="14" FontWeight="Medium">
-                            Include<LineBreak/>
-                            NSFW
-                        </TextBlock>
-                    </StackPanel>
-                    <Image Grid.Column="7" Name="GB" VerticalAlignment="Center" HorizontalAlignment="Center" Height="35" Source="../Assets/GameBanana.png" Cursor="Hand" MouseLeftButtonDown="GameBanana_Click"/>
-                    <Popup PlacementTarget="{Binding ElementName=GB}" IsOpen="{Binding IsMouseDirectlyOver, ElementName=GB, Mode=OneWay}" AllowsTransparency="True">
-                        <Border CornerRadius="5" Panel.ZIndex="0" Margin="10">
-                            <Border.BorderBrush>
-                                <SolidColorBrush Color="#101010" Opacity="0.9"/>
-                            </Border.BorderBrush>
-                            <Border.Background>
-                                <SolidColorBrush Color="#101010" Opacity="0.9"/>
-                            </Border.Background>
-                            <TextBlock Margin="10" Text="Go to gamebanana.com" Foreground="#f2f2f2" FontWeight="Medium" FontSize="18" VerticalAlignment="Center" />
-                        </Border>
-                    </Popup>
-                    <StackPanel x:Name="SZFilters" Orientation="Horizontal" HorizontalAlignment="Left" Grid.ColumnSpan="8" Grid.Row="2" Margin="10,5,5,5">
-                        <CheckBox Name="ZsJsonCheckbox" IsEnabled="False" Unchecked="ZsJsonCheckbox_Checked" Checked="ZsJsonCheckbox_Checked"  Margin="0,0,5,0" VerticalAlignment="Center" />
-                        <TextBlock Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="14" FontWeight="Medium">
-                            Exclude ZeroSpark<LineBreak/>
-                            Jsons
-                        </TextBlock>
-                        <CheckBox Name="ColorZCheckbox" IsEnabled="False" Unchecked="ColorZCheckbox_Checked"  Checked="ColorZCheckbox_Checked"  Margin="15,0,5,0" VerticalAlignment="Center" />
-                        <TextBlock Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="14" FontWeight="Medium">
-                            Exclude ColorZ<LineBreak/>
-                            Jsons
-                        </TextBlock>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Grid.ColumnSpan="8" Grid.Row="2">
-                        <Button IsEnabled="False" Name="PageLeft" Click="DecrementPage" Content="&lt;" HorizontalAlignment="Right" Margin="0,0,15,0" FontSize="18" FontWeight="Medium"  Height="35" Width="35" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2"/>
-                        <TextBlock Name="Page" Text="Page 1" Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="18" FontWeight="Medium" />
-                        <Button IsEnabled="False" Name="PageRight" Click="IncrementPage" Content=">" HorizontalAlignment="Left" Margin="15,0,0,0" FontSize="18" FontWeight="Medium" Height="35" Width="35" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2"/>
-                        <ComboBox IsEnabled="False" Margin="15,0,15,0" Name="PageBox" SelectionChanged="PageBox_SelectionChanged" Height="35" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <StackPanel Margin="5,5,10,5" Grid.ColumnSpan="8" Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="2">
-                        <Button Margin="0,0,15,0" Click="ClearCache" Name="ClearCacheButton" Content="Refresh" HorizontalAlignment="center" FontSize="18" FontWeight="Medium"  Height="35" Width="80" Background="#181818" BorderBrush="#252525" IsEnabled="False" Foreground="#f2f2f2">
-                            <Button.Resources>
-                                <Style TargetType="{x:Type Border}">
-                                    <Setter Property="CornerRadius" Value="5"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-                        <TextBlock Margin="0,0,15,0" Foreground="#f2f2f2" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="18" FontWeight="Medium">
-                            Per Page:
-                        </TextBlock>
-                        <ComboBox IsEnabled="False" Name="PerPageBox" SelectionChanged="PerPageSelectionChanged" Height="35" VerticalAlignment="Center">
-                            <ComboBoxItem>10</ComboBoxItem>
-                            <ComboBoxItem IsSelected="True">20</ComboBoxItem>
-                            <ComboBoxItem>30</ComboBoxItem>
-                            <ComboBoxItem>40</ComboBoxItem>
-                            <ComboBoxItem>50</ComboBoxItem>
-                        </ComboBox>
-                    </StackPanel>
-                    <fa5:ImageAwesome Name="LoadingBar" Grid.ColumnSpan="8" Foreground="#006ac1" Panel.ZIndex="1" Grid.Row="1" Icon="Solid_Spinner" Height="110" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
-                    <StackPanel Name="ErrorPanel" Grid.ColumnSpan="8" Grid.Row="1" Panel.ZIndex="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Name="BrowserMessage" HorizontalAlignment="Center"  Opacity="1" Background="Transparent" Foreground="#f2f2f2" FontWeight="Medium" TextWrapping="Wrap" Width="800" TextAlignment="Center" FontSize="25"/>
-                        <Button Margin="10" Click="BrowserRefresh" Name="BrowserRefreshButton" Content="Retry" HorizontalAlignment="center" FontSize="18" FontWeight="Medium"  Height="40" Width="140" Background="#181818" BorderBrush="#252525" Foreground="#f2f2f2">
-                            <Button.Resources>
-                                <Style TargetType="{x:Type Border}">
-                                    <Setter Property="CornerRadius" Value="5"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-                    </StackPanel>
-                    <Border Grid.ColumnSpan="8" Grid.Row="1" CornerRadius="5" Margin="10,0,10,0">
-                        <Border.BorderBrush>
-                            <SolidColorBrush Color="Black" Opacity="0.75"/>
-                        </Border.BorderBrush>
-                        <Border.Background>
-                            <SolidColorBrush Color="Black" Opacity="0.75"/>
-                        </Border.Background>
-                        <ListView Margin="5" Panel.ZIndex="1" Style="{StaticResource ListviewStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" VerticalContentAlignment="Top" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent" BorderBrush="Transparent" Name="FeedBox" ItemTemplate="{StaticResource ModTemplate}">
+                                </ComboBoxItem>
+                            </ComboBox>
+                            <!-- Hidden SZFilters kept for code-behind -->
+                            <StackPanel x:Name="SZFilters" Visibility="Collapsed" Orientation="Horizontal">
+                                <CheckBox Name="ZsJsonCheckbox" IsEnabled="False" Unchecked="ZsJsonCheckbox_Checked" Checked="ZsJsonCheckbox_Checked"/>
+                                <CheckBox Name="ColorZCheckbox" IsEnabled="False" Unchecked="ColorZCheckbox_Checked" Checked="ColorZCheckbox_Checked"/>
+                            </StackPanel>
+
+                            <TextBlock Margin="8,0,6,0" Foreground="#A0A0A0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Text="Per Page:"/>
+                            <ComboBox Name="PerPageBox" Style="{StaticResource RoundedTopComboBox}"
+                                      Width="70" Height="28" Margin="0,0,10,0" IsEnabled="False"
+                                      SelectionChanged="PerPageSelectionChanged">
+                                <ComboBoxItem>10</ComboBoxItem>
+                                <ComboBoxItem IsSelected="True">20</ComboBoxItem>
+                                <ComboBoxItem>30</ComboBoxItem>
+                                <ComboBoxItem>40</ComboBoxItem>
+                                <ComboBoxItem>50</ComboBoxItem>
+                            </ComboBox>
+
+                            <!-- GameBanana Logo -->
+                            <Image Name="GB" Height="26" Width="26" VerticalAlignment="Center" Cursor="Hand"
+                                   Source="../Assets/GameBanana.png" MouseLeftButtonDown="GameBanana_Click"/>
+                            <Popup PlacementTarget="{Binding ElementName=GB}" IsOpen="{Binding IsMouseDirectlyOver, ElementName=GB, Mode=OneWay}" AllowsTransparency="True">
+                                <Border CornerRadius="6" Background="#181818" BorderBrush="#383838" BorderThickness="1" Margin="8" Padding="8,4">
+                                    <TextBlock Text="Go to gamebanana.com" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12"/>
+                                </Border>
+                            </Popup>
+                        </StackPanel>
+
+                        <!-- Left / Center: Horizontal Section & Category Bar with Smooth In-Place Slide Transition -->
+                        <ScrollViewer x:Name="BrowseFilterScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                      Focusable="False" PanningMode="HorizontalOnly" VerticalAlignment="Center">
+                            <Grid VerticalAlignment="Center">
+                                <!-- View 1: Section Filter Buttons (All, Skins, Sounds, WiPs, Other/Misc, GUIs, Gameplay, Stages) -->
+                                <StackPanel x:Name="BrowseSectionPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel.RenderTransform>
+                                        <TranslateTransform x:Name="BrowseSectionTranslate" X="0"/>
+                                    </StackPanel.RenderTransform>
+                                    <ItemsControl x:Name="BrowseSectionBar">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,6,0" CornerRadius="14" Height="28" Padding="10,0" Cursor="Hand"
+                                                        PreviewMouseLeftButtonUp="BrowseSectionButton_Click" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#222222"/>
+                                                            <Setter Property="BorderBrush" Value="#383838"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background" Value="#D32F2F"/>
+                                                                    <Setter Property="BorderBrush" Value="#E53935"/>
+                                                                </DataTrigger>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#353535"/>
+                                                                </Trigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsSelected}" Value="True"/>
+                                                                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Background" Value="#B71C1C"/>
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Image Source="{Binding IconPath}" Height="16" Width="16" Margin="0,0,6,0"
+                                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                                               Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                        <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#F2F2F2" Height="12" Width="12" Margin="0,0,6,0"
+                                                                          Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                        <TextBlock Text="{Binding Name}" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                                                        <!-- Section Mod Count Badge -->
+                                                        <Border Background="#383838" BorderBrush="#555555" BorderThickness="1" CornerRadius="6" MinWidth="16" Height="14" Padding="4,0"
+                                                                Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                Visibility="{Binding HasMods, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                                                            <TextBlock Text="{Binding ModCount}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <!-- View 2: Subcategory / Character Pills Bar (Opens in place of sections with smooth animation) -->
+                                <StackPanel x:Name="BrowseCategoryPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed" Opacity="0">
+                                    <StackPanel.RenderTransform>
+                                        <TranslateTransform x:Name="BrowseCategoryTranslate" X="30"/>
+                                    </StackPanel.RenderTransform>
+                                    <!-- Back button to return to sections -->
+                                    <Button x:Name="BrowseBackButton" Height="28" Width="30" Margin="0,0,6,0"
+                                            Style="{StaticResource RoundIconButtonStyle}" Click="BrowseBackButton_Click" ToolTip="Back to Sections">
+                                        <TextBlock Text="&lt;" Foreground="#D32F2F" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,1"/>
+                                    </Button>
+
+                                    <!-- Section Badge / Indicator button (clicking shows all mods for the section) -->
+                                    <Border x:Name="BrowseSectionBadge" Margin="0,0,6,0" CornerRadius="14" Height="28" Padding="10,0" Cursor="Hand"
+                                            Background="#262626" BorderBrush="#383838" BorderThickness="1" VerticalAlignment="Center"
+                                            PreviewMouseLeftButtonUp="BrowseSectionBadge_Click" ToolTip="Show all in this section">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#353535"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="BrowseCurrentSectionImage" Height="16" Width="16" Margin="0,0,6,0"
+                                                   RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
+                                            <fa5:ImageAwesome x:Name="BrowseCurrentSectionIcon" Foreground="#F2F2F2" Height="12" Width="12" Margin="0,0,6,0" Visibility="Collapsed"/>
+                                            <TextBlock x:Name="BrowseCurrentSectionTitle" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                                            <Border Background="#383838" BorderBrush="#555555" BorderThickness="1" CornerRadius="6" MinWidth="16" Height="14" Padding="4,0"
+                                                    Margin="6,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock x:Name="BrowseCurrentSectionCount" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Divider between section badge and subcategories -->
+                                    <Border Width="1" Height="18" Background="#383838" Margin="2,0,8,0" VerticalAlignment="Center"/>
+
+                                    <!-- Subcategory / Character Pills -->
+                                    <ItemsControl x:Name="BrowseCategoryPillsBar">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,5,0" CornerRadius="13" Height="26" Padding="8,0" Cursor="Hand"
+                                                        PreviewMouseLeftButtonUp="BrowseCategoryPill_Click" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="#1C1C1C"/>
+                                                            <Setter Property="BorderBrush" Value="#303030"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="Background" Value="#D32F2F"/>
+                                                                    <Setter Property="BorderBrush" Value="#E53935"/>
+                                                                </DataTrigger>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#2E2E2E"/>
+                                                                </Trigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsSelected}" Value="True"/>
+                                                                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Background" Value="#B71C1C"/>
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Image Source="{Binding IconPath}" Height="15" Width="15" Margin="0,0,5,0"
+                                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                                               Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                        <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="11" Width="11" Margin="0,0,5,0"
+                                                                          Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                        <TextBlock Text="{Binding Name}" Foreground="#F2F2F2" FontSize="11" FontWeight="Medium" VerticalAlignment="Center"/>
+                                                        <!-- Category Mod Count Badge -->
+                                                        <Border Background="#383838" BorderBrush="#555555" BorderThickness="1" CornerRadius="6" MinWidth="15" Height="13" Padding="3,0"
+                                                                Margin="5,0,0,0" VerticalAlignment="Center"
+                                                                Visibility="{Binding HasMods, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                                                            <TextBlock Text="{Binding ModCount}" FontSize="8.5" FontWeight="Bold" Foreground="#FFFFFF"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                    </DockPanel>
+
+                    <!-- Row 2: Mod Feed & Status Indicators -->
+                    <Border Grid.Row="2" CornerRadius="6" Margin="10,0,10,10" Background="#141414" BorderBrush="#252525" BorderThickness="1">
+                        <ListView Margin="4" Panel.ZIndex="1" Style="{StaticResource ListviewStyle}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                  ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  Background="Transparent" BorderBrush="Transparent" Name="FeedBox" ItemTemplate="{StaticResource ModTemplate}">
                             <ListView.ItemContainerStyle>
                                 <Style TargetType="{x:Type ListViewItem}">
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -1003,9 +1634,17 @@
                             </ListView.ItemsPanel>
                         </ListView>
                     </Border>
+
+                    <fa5:ImageAwesome Name="LoadingBar" Grid.Row="2" Foreground="#D32F2F" Panel.ZIndex="2" Icon="Solid_Spinner" Height="70" VerticalAlignment="Center" HorizontalAlignment="Center" Spin="True" SpinDuration="2"/>
+                    <StackPanel Name="ErrorPanel" Grid.Row="2" Panel.ZIndex="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Name="BrowserMessage" HorizontalAlignment="Center" Background="Transparent" Foreground="#F2F2F2" FontWeight="SemiBold" TextWrapping="Wrap" Width="600" TextAlignment="Center" FontSize="18"/>
+                        <Button Margin="12" Click="BrowserRefresh" Name="BrowserRefreshButton" Style="{StaticResource RoundedTopButton}" Height="30" Width="120" Content="Retry"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>
     </Grid>
 
 </Window>
+
+

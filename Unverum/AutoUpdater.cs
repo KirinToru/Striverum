@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,76 +12,113 @@ using Onova.Services;
 using System.Diagnostics;
 using System.Reflection;
 using System.IO;
-using Unverum.UI;
+using Striverum.UI;
 using System.Windows.Media.Imaging;
 
-namespace Unverum
+namespace Striverum
 {
     public class AutoUpdater
     {
         private static ProgressBox progressBox;
         private static HttpClient client = new HttpClient();
 
-        public static async Task<bool> CheckForUnverumUpdate(CancellationTokenSource cancellationToken)
+        public static string GitHubOwner = "KirinToru";
+        public static string GitHubRepo = "Striverum";
+
+        static AutoUpdater()
+        {
+            if (!client.DefaultRequestHeaders.Contains("User-Agent"))
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Striverum-AutoUpdater");
+            }
+        }
+
+        public static async Task<bool> CheckForStriverumUpdate(CancellationTokenSource cancellationToken)
         {
             // Get Version Number
             var localVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
             try
             {
-                var requestUrl = $"https://api.gamebanana.com/Core/Item/Data?itemtype=Tool&itemid=7162&fields=Updates().bSubmissionHasUpdates()," +
-                    $"Updates().aGetLatestUpdates(),Files().aFiles()&return_keys=1";
-                GameBananaItem response = JsonSerializer.Deserialize<GameBananaItem>(await client.GetStringAsync(requestUrl));
-                if (response == null)
+                var requestUrl = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
+                using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+                using var response = await client.SendAsync(request, cancellationToken.Token);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                   MessageBox.Show("Error whilst checking for Unverum update: No response from GameBanana API");
+                    // Fork repository or release might not exist yet, silently return
                     return false;
                 }
-                if (response.HasUpdates != null && (bool)response.HasUpdates)
+
+                var jsonString = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(jsonString);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("tag_name", out var tagProp))
+                    return false;
+
+                string onlineTag = tagProp.GetString() ?? "";
+                string onlineVersion = onlineTag.TrimStart('v', 'V');
+
+                if (UpdateAvailable(onlineVersion, localVersion))
                 {
-                    GameBananaItemUpdate[] updates = response.Updates;
-                    string updateTitle = updates[0].Title;
-                    Match onlineVersionMatch = Regex.Match(updateTitle, @"(?<version>([0-9]+\.?)+)[^a-zA-Z]");
-                    string onlineVersion = null;
-                    if (onlineVersionMatch.Success)
+                    string releaseTitle = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : onlineTag;
+                    string releaseBody = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : "";
+
+                    string downloadUrl = null;
+                    string fileName = null;
+
+                    if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
                     {
-                        onlineVersion = onlineVersionMatch.Value;
-                    }
-                    if (UpdateAvailable(onlineVersion, localVersion))
-                    {
-                        ChangelogBox notification = new ChangelogBox(updates[0], "Unverum", $"A new version of Unverum is available (v{onlineVersion})!", null);
-                        notification.ShowDialog();
-                        notification.Activate();
-                        if (notification.YesNo)
+                        foreach (var asset in assetsProp.EnumerateArray())
                         {
-                            Dictionary<String, GameBananaItemFile> files = response.Files;
-                            string downloadUrl = files.ElementAt(0).Value.DownloadUrl;
-                            string fileName = files.ElementAt(0).Value.FileName;
-                            // Download the update
-                            await DownloadUnverum(downloadUrl, fileName, onlineVersion, new Progress<DownloadProgress>(ReportUpdateProgress), cancellationToken);
-                            // Notify that the update is about to happen
-                            MessageBox.Show($"Finished downloading {fileName}!\nUnverum will now restart.", "Notification", MessageBoxButton.OK);
-                            // Update Unverum
-                            UpdateManager updateManager = new UpdateManager(new LocalPackageResolver($"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate"), new ZipExtractor());
-                            if (!Version.TryParse(onlineVersion, out Version version))
+                            string assetName = asset.TryGetProperty("name", out var an) ? an.GetString() : "";
+                            if (assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || assetName.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
                             {
-                                MessageBox.Show($"Error parsing {onlineVersion}!\nCancelling update.", "Notification", MessageBoxButton.OK);
-                                return false;
+                                downloadUrl = asset.TryGetProperty("browser_download_url", out var bdu) ? bdu.GetString() : null;
+                                fileName = assetName;
+                                break;
                             }
-                            // Updates and restarts Unverum
-                            await updateManager.PrepareUpdateAsync(version);
-                            updateManager.LaunchUpdater(version);
-                            return true;
                         }
+                    }
+
+                    var fakeUpdate = new GameBananaItemUpdate
+                    {
+                        Title = releaseTitle,
+                        Version = onlineVersion,
+                        Text = releaseBody ?? "",
+                        Changes = new GameBananaItemUpdateChange[] { new GameBananaItemUpdateChange { Category = "Release", Text = releaseTitle } }
+                    };
+
+                    ChangelogBox notification = new ChangelogBox(fakeUpdate, "Striverum", $"A new version of Striverum is available (v{onlineVersion})!", null);
+                    notification.ShowDialog();
+                    notification.Activate();
+                    if (notification.YesNo && !string.IsNullOrEmpty(downloadUrl) && !string.IsNullOrEmpty(fileName))
+                    {
+                        // Download the update
+                        await DownloadStriverum(downloadUrl, fileName, onlineVersion, new Progress<DownloadProgress>(ReportUpdateProgress), cancellationToken);
+                        // Notify that the update is about to happen
+                        MessageBox.Show($"Finished downloading {fileName}!\nStriverum will now restart.", "Notification", MessageBoxButton.OK);
+                        // Update Striverum
+                        UpdateManager updateManager = new UpdateManager(new LocalPackageResolver($"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate"), new ZipExtractor());
+                        if (!Version.TryParse(onlineVersion, out Version version))
+                        {
+                            MessageBox.Show($"Error parsing {onlineVersion}!\nCancelling update.", "Notification", MessageBoxButton.OK);
+                            return false;
+                        }
+                        // Updates and restarts Striverum
+                        await updateManager.PrepareUpdateAsync(version);
+                        updateManager.LaunchUpdater(version);
+                        return true;
                     }
                 }
             }
             catch (Exception e)
             {
-                Global.logger.WriteLine($"Unable to check for update... ({e.Message})", LoggerType.Error);
+                Global.logger?.WriteLine($"Update check: {e.Message}", LoggerType.Info);
             }
             return false;
         }
-        private static async Task DownloadUnverum(string uri, string fileName, string version, Progress<DownloadProgress> progress, CancellationTokenSource cancellationToken)
+        private static async Task DownloadStriverum(string uri, string fileName, string version, Progress<DownloadProgress> progress, CancellationTokenSource cancellationToken)
         {
             try
             {
@@ -91,31 +128,31 @@ namespace Unverum
                     Directory.CreateDirectory(@$"{Global.assemblyLocation}{Global.s}Downloads");
                 }
                 // Create the downloads folder if necessary
-                if (!Directory.Exists(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate"))
+                if (!Directory.Exists(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate"))
                 {
-                    Directory.CreateDirectory(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate");
+                    Directory.CreateDirectory(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate");
                 }
                 progressBox = new ProgressBox(cancellationToken);
                 progressBox.progressBar.Value = 0;
                 progressBox.progressText.Text = $"Downloading {fileName}";
-                progressBox.Title = "Unverum Update Progress";
+                progressBox.Title = "Striverum Update Progress";
                 progressBox.finished = false;
                 progressBox.Show();
                 progressBox.Activate();
                 // Write and download the file
                 using (var fs = new FileStream(
-                    $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate/{fileName}", FileMode.Create, FileAccess.Write, FileShare.None))
+                    $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate/{fileName}", FileMode.Create, FileAccess.Write, FileShare.None))
                 {
                     await client.DownloadAsync(uri, fs, fileName, progress, cancellationToken.Token);
                 }
                 // Rename the file
-                File.Move($@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate{Global.s}{fileName}", $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate{Global.s}{version}.7z", true);
+                File.Move($@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate{Global.s}{fileName}", $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate{Global.s}{version}.7z", true);
                 progressBox.Close();
             }
             catch (OperationCanceledException)
             {
                 // Remove the file is it will be a partially downloaded one and close up
-                File.Delete(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}UnverumUpdate{Global.s}{fileName}");
+                File.Delete(@$"{Global.assemblyLocation}{Global.s}Downloads{Global.s}StriverumUpdate{Global.s}{fileName}");
                 if (progressBox != null)
                 {
                     progressBox.finished = true;

@@ -1,15 +1,66 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Unverum.UI;
+using Striverum.UI;
 
-namespace Unverum
+namespace Striverum
 {
     public class Mod
     {
         public string name { get; set; }
         public bool enabled { get; set; }
         public Dictionary<string, bool> paks { get; set; }
+        
+        // Cached metadata properties for UI
+        public List<string> tags { get; set; }
+        public string cat { get; set; }
+        public string subcategory { get; set; }
+        public Uri caticon { get; set; }
+        public DateTime? lastupdate { get; set; }
+        public string cachedIconPath { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ObservableCollection<ModTag> TagItems { get; set; } = new ObservableCollection<ModTag>();
+    }
+    public class ModTag : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _isActive;
+        private string _iconPath;
+        private FontAwesome5.EFontAwesomeIcon _faIcon;
+
+        public string Name { get; set; }
+        public string IconPath
+        {
+            get => _iconPath;
+            set
+            {
+                _iconPath = value;
+                OnPropertyChanged(nameof(IconPath));
+                OnPropertyChanged(nameof(HasImage));
+            }
+        }
+        public FontAwesome5.EFontAwesomeIcon FaIcon
+        {
+            get => _faIcon;
+            set
+            {
+                _faIcon = value;
+                OnPropertyChanged(nameof(FaIcon));
+            }
+        }
+        public bool HasImage => !string.IsNullOrEmpty(IconPath);
+        public bool IsActive
+        {
+            get => _isActive;
+            set
+            {
+                _isActive = value;
+                OnPropertyChanged(nameof(IsActive));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string prop)
+            => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(prop));
     }
     public class Metadata
     {
@@ -19,6 +70,8 @@ namespace Unverum
         public Uri upic { get; set; }
         public Uri caticon { get; set; }
         public string cat { get; set; }
+        public string subcategory { get; set; }
+        public List<string> tags { get; set; }
         public string description { get; set; }
         public string filedescription { get; set; }
         public Uri homepage { get; set; }
@@ -63,5 +116,7 @@ namespace Unverum
         public string OptionText { get; set; }
         public string OptionSubText { get; set; }
         public int Index { get; set; }
+        public FontAwesome5.EFontAwesomeIcon FaIcon { get; set; } = FontAwesome5.EFontAwesomeIcon.None;
+        public bool HasIcon => FaIcon != FontAwesome5.EFontAwesomeIcon.None;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Windows.Input;
 
-namespace Unverum
+namespace Striverum
 {
     /// <summary>
     /// Interaction logic for EditWindow.xaml

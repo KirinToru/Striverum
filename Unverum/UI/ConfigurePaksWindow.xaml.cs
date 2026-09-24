@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ using System.Windows.Input;
 using System.Windows.Controls.Primitives;
 using System.Collections.ObjectModel;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     /// <summary>
     /// Interaction logic for ConfigurePaksWindow.xaml

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +8,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows;
 
-namespace Unverum
+namespace Striverum
 {
     public enum LoggerType
     {

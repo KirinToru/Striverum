@@ -1,9 +1,9 @@
-﻿<Window x:Class="Unverum.ProgressBox"
+<Window x:Class="Striverum.ProgressBox"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Unverum" WindowStartupLocation="CenterScreen"
+        xmlns:local="clr-namespace:Striverum" WindowStartupLocation="CenterScreen"
         mc:Ignorable="d" Background="#202020" Closing="Window_Closing"
         Title="ProgressBox" Height="160" Width="500">
     <Grid>
@@ -13,7 +13,7 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Name="progressTitle" HorizontalAlignment="Center" TextWrapping="Wrap" Foreground="White" Text="" VerticalAlignment="Center" FontSize="15"/>
-        <ProgressBar Foreground="#006ac1" Background="#303030" BorderBrush="#353535" Grid.Row="1" Name="progressBar" HorizontalAlignment="Center" Height="24" VerticalAlignment="Center" Width="300" ValueChanged="ProgressBar_ValueChanged"/>
+        <ProgressBar Foreground="#D32F2F" Background="#303030" BorderBrush="#353535" Grid.Row="1" Name="progressBar" HorizontalAlignment="Center" Height="24" VerticalAlignment="Center" Width="300" ValueChanged="ProgressBar_ValueChanged"/>
         <TextBlock Grid.Row="2" Name="progressText" HorizontalAlignment="Center" TextWrapping="Wrap" Foreground="White" Text="" VerticalAlignment="Center" FontSize="15"/>
     </Grid>
     <Window.TaskbarItemInfo>

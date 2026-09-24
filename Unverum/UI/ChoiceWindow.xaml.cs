@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +15,7 @@ using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.Media;
 
-namespace Unverum.UI
+namespace Striverum.UI
 {
     /// <summary>
     /// Interaction logic for UpdateFileBox.xaml
@@ -28,7 +28,15 @@ namespace Unverum.UI
             InitializeComponent();
             ChoiceList.ItemsSource = choices;
             if (title != null)
+            {
                 Title = title;
+                if (title.Contains("Loadout", StringComparison.OrdinalIgnoreCase))
+                    HeaderIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_SlidersH;
+                else if (title.Contains("Add Mod", StringComparison.OrdinalIgnoreCase) || title.Contains("Mod", StringComparison.OrdinalIgnoreCase))
+                    HeaderIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_Plus;
+                else if (title.Contains("Launcher", StringComparison.OrdinalIgnoreCase))
+                    HeaderIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_Play;
+            }
         }
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {

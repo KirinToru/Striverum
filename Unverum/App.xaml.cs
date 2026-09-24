@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
 using System.Threading;
 using System;
 
-namespace Unverum
+namespace Striverum
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -46,15 +46,15 @@ namespace Unverum
             if (!running)
             {
                 mw.Show();
-                // Only check for updates if Unverum wasn't launched by 1-click install button
+                // Only check for updates if Striverum wasn't launched by 1-click install button
                 if (e.Args.Length == 0)
-                    if (await AutoUpdater.CheckForUnverumUpdate(new CancellationTokenSource()))
+                    if (await AutoUpdater.CheckForStriverumUpdate(new CancellationTokenSource()))
                         mw.Close();
             }
             if (e.Args.Length > 1 && e.Args[0] == "-download")
-                new ModDownloader().Download(e.Args[1], running);
+                await new ModDownloader().DownloadAsync(e.Args[1], running);
             else if (running)
-                MessageBox.Show("Unverum is already running", "Warning", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                MessageBox.Show("Striverum is already running", "Warning", MessageBoxButton.OK, MessageBoxImage.Exclamation);
         }
         private static void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
@@ -65,17 +65,16 @@ namespace Unverum
             e.Handled = true;
             App.Current.Dispatcher.Invoke((Action)delegate
             {
-                ((MainWindow)Current.MainWindow).ModGrid.IsEnabled = true;
+                ((MainWindow)Current.MainWindow).ModListView.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).ConfigButton.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).LaunchButton.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).OpenModsButton.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).UpdateButton.IsEnabled = true;
-                ((MainWindow)Current.MainWindow).GameBox.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).EditLoadoutsButton.IsEnabled = true;
                 ((MainWindow)Current.MainWindow).LoadoutsBox.IsEnabled = true;
-                if (Global.config != null && Global.config.CurrentGame != "Dragon Ball FighterZ")
-                    ((MainWindow)Current.MainWindow).LauncherOptionsBox.IsEnabled = true;
+                ((MainWindow)Current.MainWindow).LauncherOptionsBox.IsEnabled = true;
             });
         }
     }
 }
+

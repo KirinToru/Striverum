@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,7 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Net.Http;
 using System.Threading;
-using Unverum.UI;
+using Striverum.UI;
 using System.Reflection;
 using System.Windows;
 using SharpCompress.Common;
@@ -14,7 +14,7 @@ using SharpCompress.Readers;
 using SharpCompress.Archives.SevenZip;
 using SharpCompress.Archives;
 
-namespace Unverum
+namespace Striverum
 {
     public static class ModUpdater
     {
@@ -25,8 +25,8 @@ namespace Unverum
             updateCounter = 0;
             if (!Directory.Exists(path))
             {
-                main.GameBox.IsEnabled = true;
-                main.ModGrid.IsEnabled = true;
+
+                main.ModListView.IsEnabled = true;
                 main.ConfigButton.IsEnabled = true;
                 main.LaunchButton.IsEnabled = true;
                 main.OpenModsButton.IsEnabled = true;
@@ -34,7 +34,6 @@ namespace Unverum
                 main.EditLoadoutsButton.IsEnabled = true;
                 main.LoadoutsBox.IsEnabled = true;
                 main.LauncherOptionsBox.IsEnabled = true;
-                main.ModGridSearchButton.IsEnabled = true;
                 main.Activate();
                 return;
             }
@@ -95,15 +94,14 @@ namespace Unverum
             if (requestUrls.Count == 0)
             {
                 Global.logger.WriteLine("No updates available.", LoggerType.Info);
-                main.GameBox.IsEnabled = true;
-                main.ModGrid.IsEnabled = true;
+
+                main.ModListView.IsEnabled = true;
                 main.ConfigButton.IsEnabled = true;
                 main.LaunchButton.IsEnabled = true;
                 main.OpenModsButton.IsEnabled = true;
                 main.UpdateButton.IsEnabled = true;
                 main.EditLoadoutsButton.IsEnabled = true;
                 main.LoadoutsBox.IsEnabled = true;
-                main.ModGridSearchButton.IsEnabled = true;
                 if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
                     main.LauncherOptionsBox.IsEnabled = true;
                 return;
@@ -124,15 +122,14 @@ namespace Unverum
                         catch (Exception e)
                         {
                             Global.logger.WriteLine($"{requestUrl} {e.Message}", LoggerType.Error);
-                            main.GameBox.IsEnabled = true;
-                            main.ModGrid.IsEnabled = true;
+
+                            main.ModListView.IsEnabled = true;
                             main.ConfigButton.IsEnabled = true;
                             main.LaunchButton.IsEnabled = true;
                             main.OpenModsButton.IsEnabled = true;
                             main.UpdateButton.IsEnabled = true;
                             main.EditLoadoutsButton.IsEnabled = true;
                             main.LoadoutsBox.IsEnabled = true;
-                            main.ModGridSearchButton.IsEnabled = true;
                             if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
                                 main.LauncherOptionsBox.IsEnabled = true;
                             return;
@@ -163,15 +160,14 @@ namespace Unverum
             else
                 Global.logger.WriteLine("Done checking for updates!", LoggerType.Info);
 
-            main.GameBox.IsEnabled = true;
-            main.ModGrid.IsEnabled = true;
+
+            main.ModListView.IsEnabled = true;
             main.ConfigButton.IsEnabled = true;
             main.LaunchButton.IsEnabled = true;
             main.OpenModsButton.IsEnabled = true;
             main.UpdateButton.IsEnabled = true;
             main.EditLoadoutsButton.IsEnabled = true;
             main.LoadoutsBox.IsEnabled = true;
-            main.ModGridSearchButton.IsEnabled = true;
             if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
                 main.LauncherOptionsBox.IsEnabled = true;
             main.Activate();
@@ -264,7 +260,7 @@ namespace Unverum
                     }
                     if (item.AlternateFileSources != null)
                     {
-                        var choice = MessageBox.Show($"Alternate file sources were found for {Path.GetFileName(mod)}! Would you like to manually update?", "Unverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                        var choice = MessageBox.Show($"Alternate file sources were found for {Path.GetFileName(mod)}! Would you like to manually update?", "Striverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
                         if (choice == MessageBoxResult.Yes)
                         {
                             new AltLinkWindow(item.AlternateFileSources, Path.GetFileName(mod), Global.config.CurrentGame, metadata.homepage.AbsoluteUri, true).ShowDialog();
@@ -447,3 +443,4 @@ namespace Unverum
         }
     }
 }
+

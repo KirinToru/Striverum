@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Unverum
+namespace Striverum
 {
     public class GameBananaItem
     {
@@ -74,6 +74,8 @@ namespace Unverum
     }
     public class GameBananaGame
     {
+        [JsonPropertyName("_idRow")]
+        public int Id { get; set; }
         [JsonPropertyName("_sName")]
         public string Name { get; set; }
     }

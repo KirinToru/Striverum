@@ -1,9 +1,9 @@
-﻿<Window x:Class="Unverum.DownloadWindow"
+<Window x:Class="Striverum.DownloadWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Unverum" WindowStartupLocation="CenterScreen"
+        xmlns:local="clr-namespace:Striverum" WindowStartupLocation="CenterScreen"
         mc:Ignorable="d" Background="#202020" ResizeMode="NoResize"
         Title="Download" SizeToContent="Height" Width="375">
     <Grid>

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Controls;
 using System.Text.Json;
 using System.Diagnostics;
@@ -16,25 +17,1169 @@ using System.Windows.Media.Imaging;
 using System.Xml.Linq;
 using System.Net.Http;
 using System.Windows.Media;
-using Unverum.UI;
+using Striverum.UI;
 using System.Windows.Controls.Primitives;
 using System.Security.Cryptography;
 using Microsoft.Win32;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
+using System.Runtime.CompilerServices;
 
-namespace Unverum
+namespace Striverum
 {
+    public class CategoryItem : INotifyPropertyChanged
+    {
+        private bool _isActive;
+        private int _modCount;
+        public string Name { get; set; }
+        public string IconPath { get; set; }
+        public FontAwesome5.EFontAwesomeIcon FaIcon { get; set; } = FontAwesome5.EFontAwesomeIcon.Solid_Tag;
+        public bool HasImage => !string.IsNullOrEmpty(IconPath);
+        public bool IsActive
+        {
+            get => _isActive;
+            set { _isActive = value; OnPropertyChanged(); }
+        }
+        public int ModCount
+        {
+            get => _modCount;
+            set
+            {
+                _modCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMods));
+                OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+        public bool HasMods => _modCount > 0;
+        public string DisplayName => HasMods ? $"{Name} - {ModCount}" : Name;
+        public ObservableCollection<CategoryItem> Subcategories { get; set; } = new ObservableCollection<CategoryItem>();
+        public bool HasSubcategories => Subcategories != null && Subcategories.Count > 0;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string prop = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class SectionItem : INotifyPropertyChanged
+    {
+        private bool _isActive;
+        private int _modCount;
+        public string Name { get; set; }
+        public string IconPath { get; set; }
+        public FontAwesome5.EFontAwesomeIcon FaIcon { get; set; } = FontAwesome5.EFontAwesomeIcon.Solid_Folder;
+        public bool HasImage => !string.IsNullOrEmpty(IconPath);
+        public bool IsActive
+        {
+            get => _isActive;
+            set { _isActive = value; OnPropertyChanged(); }
+        }
+        public int ModCount
+        {
+            get => _modCount;
+            set
+            {
+                _modCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMods));
+                OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+        public bool HasMods => _modCount > 0;
+        public string DisplayName => HasMods ? $"{Name} - {ModCount}" : Name;
+        public ObservableCollection<CategoryItem> Categories { get; set; } = new ObservableCollection<CategoryItem>();
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string prop = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class CoverFlowItem : INotifyPropertyChanged
+    {
+        public int Index { get; set; }
+        public string ImageUrl { get; set; }
+        public string Title { get; set; }
+        public string Caption { get; set; }
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+            }
+        }
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string prop = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class BrowseSectionItem : INotifyPropertyChanged
+    {
+        private bool _isSelected;
+        private int _modCount;
+        public string Name { get; set; }
+        public string IconPath { get; set; }
+        public FontAwesome5.EFontAwesomeIcon FaIcon { get; set; }
+        public bool HasImage => !string.IsNullOrEmpty(IconPath);
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+        public int ModCount
+        {
+            get => _modCount;
+            set
+            {
+                _modCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMods));
+            }
+        }
+        public bool HasMods => _modCount > 0;
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string prop = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class BrowseCategoryItem : INotifyPropertyChanged
+    {
+        private bool _isSelected;
+        private int _modCount;
+        public string Name { get; set; }
+        public string IconPath { get; set; }
+        public FontAwesome5.EFontAwesomeIcon FaIcon { get; set; }
+        public bool HasImage => !string.IsNullOrEmpty(IconPath);
+        public GameBananaCategory GbCategory { get; set; }
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+        public int ModCount
+        {
+            get => _modCount;
+            set
+            {
+                _modCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMods));
+            }
+        }
+        public bool HasMods => _modCount > 0;
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string prop = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+    }
+
+    public class GbCategoryRecord
+    {
+        public int _idRow { get; set; }
+        public string _sName { get; set; }
+        public string _sIconUrl { get; set; }
+        public string _sProfileUrl { get; set; }
+        public string _idParentCategoryRow { get; set; }
+    }
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+        // Filter state
+        public HashSet<string> ActiveSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> ActiveCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private SectionItem _currentSection = null;
+        private CategoryItem _parentCategory = null;
+        private ObservableCollection<SectionItem> _sections = new ObservableCollection<SectionItem>();
+        public ObservableCollection<BrowseSectionItem> BrowseSections { get; set; } = new ObservableCollection<BrowseSectionItem>();
+        public ObservableCollection<BrowseCategoryItem> BrowseCategoryPills { get; set; } = new ObservableCollection<BrowseCategoryItem>();
+        public ObservableCollection<CoverFlowItem> GalleryItems { get; set; } = new ObservableCollection<CoverFlowItem>();
+
+        public static bool CategoryMatches(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
+            if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return true;
+            string normA = a.Replace("'", "").Replace("-", "").Replace("♯", "#").Replace("?", "").Trim();
+            string normB = b.Replace("'", "").Replace("-", "").Replace("♯", "#").Replace("?", "").Trim();
+            return string.Equals(normA, normB, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string GetCategoryIconPath(string iconUrl)
+        {
+            if (string.IsNullOrEmpty(iconUrl)) return null;
+            if (iconUrl.StartsWith("pack://") || iconUrl.StartsWith("/")) return iconUrl;
+            try
+            {
+                string fileName = Path.GetFileName(new Uri(iconUrl).LocalPath);
+                string localPath = $@"{Global.assemblyLocation}{Global.s}Cache{Global.s}Icons{Global.s}{fileName}";
+                if (File.Exists(localPath)) return localPath;
+            }
+            catch { }
+            return iconUrl;
+        }
+
+        private static FontAwesome5.EFontAwesomeIcon GetSectionFaIcon(string section)
+        {
+            if (string.IsNullOrEmpty(section)) return FontAwesome5.EFontAwesomeIcon.Solid_Folder;
+            var s = section.ToLowerInvariant();
+            if (s.Contains("sound") || s.Contains("audio") || s.Contains("voice") || s.Contains("music")) return FontAwesome5.EFontAwesomeIcon.Solid_VolumeUp;
+            if (s.Contains("wip") || s.Contains("work in progress")) return FontAwesome5.EFontAwesomeIcon.Solid_Wrench;
+            if (s.Contains("skin") || s.Contains("char") || s.Contains("costume")) return FontAwesome5.EFontAwesomeIcon.Solid_Tshirt;
+            if (s.Contains("misc") || s.Contains("other")) return FontAwesome5.EFontAwesomeIcon.Solid_QuestionCircle;
+            if (s.Contains("gui") || s.Contains("ui") || s.Contains("hud")) return FontAwesome5.EFontAwesomeIcon.Solid_Palette;
+            if (s.Contains("gameplay") || s.Contains("move") || s.Contains("script")) return FontAwesome5.EFontAwesomeIcon.Solid_Cog;
+            if (s.Contains("stage")) return FontAwesome5.EFontAwesomeIcon.Solid_Tree;
+            return FontAwesome5.EFontAwesomeIcon.Solid_Folder;
+        }
+
+        private static FontAwesome5.EFontAwesomeIcon GetCategoryFaIcon(string category)
+        {
+            if (string.IsNullOrEmpty(category)) return FontAwesome5.EFontAwesomeIcon.Solid_Cog;
+            var c = category.ToLowerInvariant();
+            if (c.Contains("translat")) return FontAwesome5.EFontAwesomeIcon.Solid_Language;
+            if (c.Contains("hud") || c.Contains("portrait") || c.Contains("font") || c.Contains("select")) return FontAwesome5.EFontAwesomeIcon.Solid_Palette;
+            if (c.Contains("stage")) return FontAwesome5.EFontAwesomeIcon.Solid_Mountain;
+            return FontAwesome5.EFontAwesomeIcon.Solid_Cog;
+        }
+
+        private void ResolveModTagIcon(ModTag tagItem, Mod mod)
+        {
+            if (tagItem == null) return;
+
+            // 1. Check if tag matches a section in _sections (e.g. Skins, Other/Misc, GUIs, Gameplay, Stages)
+            var matchingSec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagItem.Name));
+            if (matchingSec != null)
+            {
+                tagItem.IconPath = matchingSec.IconPath;
+                tagItem.FaIcon = matchingSec.FaIcon;
+                return;
+            }
+
+            // 2. Check if tag matches a category in any section (e.g. character name, Translation)
+            foreach (var sec in _sections)
+            {
+                var matchingCat = sec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, tagItem.Name));
+                if (matchingCat != null && !string.IsNullOrEmpty(matchingCat.IconPath))
+                {
+                    tagItem.IconPath = matchingCat.IconPath;
+                    tagItem.FaIcon = matchingCat.FaIcon;
+                    return;
+                }
+                foreach (var cat in sec.Categories)
+                {
+                    var matchingSub = cat.Subcategories?.FirstOrDefault(s => CategoryMatches(s.Name, tagItem.Name));
+                    if (matchingSub != null && !string.IsNullOrEmpty(matchingSub.IconPath))
+                    {
+                        tagItem.IconPath = matchingSub.IconPath;
+                        tagItem.FaIcon = matchingSub.FaIcon;
+                        return;
+                    }
+                }
+            }
+
+            // 3. Fallback to mod's own cached icon if tag matches mod subcategory
+            if (mod != null && !string.IsNullOrEmpty(mod.subcategory) && CategoryMatches(tagItem.Name, mod.subcategory))
+            {
+                tagItem.IconPath = mod.cachedIconPath ?? mod.caticon?.ToString();
+                tagItem.FaIcon = GetCategoryFaIcon(tagItem.Name);
+                return;
+            }
+
+            // 4. Default fallback
+            tagItem.FaIcon = GetCategoryFaIcon(tagItem.Name);
+        }
+
+        private void InitDefaultSections()
+        {
+            if (_sections.Count > 0) return;
+
+            // 1. Skins (5 main GameBanana mod categories for Guilty Gear -Strive-)
+            var skins = new SectionItem
+            {
+                Name = "Skins",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/60ce8d5f438ee.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Tshirt
+            };
+            var striveSkinCats = new (string Name, string Icon)[]
+            {
+                ("Robo-Ky", "https://images.gamebanana.com/img/ico/ModCategory/6a4661f5c42fb.png"),
+                ("Jam Kuradoberi", "https://images.gamebanana.com/img/ico/ModCategory/69c02cde0f13e.png"),
+                ("Lucy", "https://images.gamebanana.com/img/ico/ModCategory/6892a26b62af1.png"),
+                ("Unika", "https://images.gamebanana.com/img/ico/ModCategory/683484e320e85.png"),
+                ("Venom", "https://images.gamebanana.com/img/ico/ModCategory/67e9e9dd5b1a7.png"),
+                ("Queen Dizzy", "https://images.gamebanana.com/img/ico/ModCategory/671a967d8aaf0.png"),
+                ("Slayer", "https://images.gamebanana.com/img/ico/ModCategory/665696e58f26d.png"),
+                ("A.B.A", "https://images.gamebanana.com/img/ico/ModCategory/6601bfa7852a8.png"),
+                ("Elphelt Valentine", "https://images.gamebanana.com/img/ico/ModCategory/65729b7692a78.png"),
+                ("Johnny", "https://images.gamebanana.com/img/ico/ModCategory/64e7e423a999d.png"),
+                ("Bedman?", "https://images.gamebanana.com/img/ico/ModCategory/64e7e51206831.png"),
+                ("Sin Kiske", "https://images.gamebanana.com/img/ico/ModCategory/637f1e29eaf46.png"),
+                ("Bridget", "https://images.gamebanana.com/img/ico/ModCategory/6572b2b833fae.png"),
+                ("Testament", "https://images.gamebanana.com/img/ico/ModCategory/623cf5a74ab8d.png"),
+                ("Baiken", "https://images.gamebanana.com/img/ico/ModCategory/61f3aacebcb3b.png"),
+                ("Potemkin", "https://images.gamebanana.com/img/ico/ModCategory/60cfc7cf41135.png"),
+                ("Leo Whitefang", "https://images.gamebanana.com/img/ico/ModCategory/60cfca12de46b.png"),
+                ("Zato-1", "https://images.gamebanana.com/img/ico/ModCategory/60cfcab6b9bd5.png"),
+                ("Anji Mito", "https://images.gamebanana.com/img/ico/ModCategory/60cfc93fe449f.png"),
+                ("Giovanna", "https://images.gamebanana.com/img/ico/ModCategory/60cfc9800be32.png"),
+                ("I-No", "https://images.gamebanana.com/img/ico/ModCategory/60cfc9cb2b71e.png"),
+                ("Millia Rage", "https://images.gamebanana.com/img/ico/ModCategory/60cfca5d301a5.png"),
+                ("Jack'O", "https://images.gamebanana.com/img/ico/ModCategory/613257b01099d.png"),
+                ("Goldlewis Dickinson", "https://images.gamebanana.com/img/ico/ModCategory/61325e24e2c3c.png"),
+                ("Happy Chaos", "https://images.gamebanana.com/img/ico/ModCategory/61e334a4a8e69.png"),
+                ("Asuka R♯", "https://images.gamebanana.com/img/ico/ModCategory/657ba66ddb03d.png"),
+                ("Nagoriyuki", "https://images.gamebanana.com/img/ico/ModCategory/61325d241b84c.png"),
+                ("Axl Low", "https://images.gamebanana.com/img/ico/ModCategory/61325db7a5368.png"),
+                ("Chipp Zanuff", "https://images.gamebanana.com/img/ico/ModCategory/61325ccb7e398.png"),
+                ("Faust", "https://images.gamebanana.com/img/ico/ModCategory/613258ab7293f.png"),
+                ("Sol Badguy", "https://images.gamebanana.com/img/ico/ModCategory/613256a677273.png"),
+                ("Ky Kiske", "https://images.gamebanana.com/img/ico/ModCategory/61325a8fe708f.png"),
+                ("Ramlethal Valentine", "https://images.gamebanana.com/img/ico/ModCategory/60ce909a99027.png"),
+                ("Several Characters", "https://images.gamebanana.com/img/ico/ModCategory/631633f5138f8.png"),
+                ("May", "https://images.gamebanana.com/img/ico/ModCategory/60ce9048b155e.png")
+            };
+            foreach (var item in striveSkinCats)
+            {
+                skins.Categories.Add(new CategoryItem
+                {
+                    Name = item.Name,
+                    IconPath = GetCategoryIconPath(item.Icon),
+                    FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_User
+                });
+            }
+            _sections.Add(skins);
+
+            // 2. Other/Misc
+            var misc = new SectionItem
+            {
+                Name = "Other/Misc",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/62829c5f9e5f8.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_QuestionCircle
+            };
+            misc.Categories.Add(new CategoryItem
+            {
+                Name = "Translation",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/667490b249fb9.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Language
+            });
+            _sections.Add(misc);
+
+            // 3. GUIs
+            var guis = new SectionItem
+            {
+                Name = "GUIs",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/6101d57ac2be9.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Palette
+            };
+            _sections.Add(guis);
+
+            // 4. Gameplay
+            var gameplay = new SectionItem
+            {
+                Name = "Gameplay",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/616169f346a22.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog
+            };
+            _sections.Add(gameplay);
+
+            // 5. Stages
+            var stages = new SectionItem
+            {
+                Name = "Stages",
+                IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/6168e12ead8c9.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Tree
+            };
+            _sections.Add(stages);
+
+            // 6. Sounds
+            var sounds = new SectionItem
+            {
+                Name = "Sounds",
+                IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/sounds.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_VolumeUp
+            };
+
+            var charVoiceCat = new CategoryItem
+            {
+                Name = "Character Voice",
+                IconPath = "",
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog
+            };
+            var charVoiceSubs = new (string Name, string Icon)[]
+            {
+                ("Ky Kiske", "https://images.gamebanana.com/img/ico/SoundCategory/6a67a57d415c9.png"),
+                ("Robo-Ky", ""),
+                ("Jam Kuradoberi", ""),
+                ("Lucy", ""),
+                ("Unika", ""),
+                ("May", ""),
+                ("Happy Chaos", ""),
+                ("Dizzy", ""),
+                ("Baiken", ""),
+                ("Slayer", ""),
+                ("Chipp", ""),
+                ("Elphelt", ""),
+                ("Potemkin", ""),
+                ("Asuka R#", ""),
+                ("Faust", ""),
+                ("Axl", ""),
+                ("Bridget", ""),
+                ("Jack", ""),
+                ("Nagoriyuki", ""),
+                ("I-No", "")
+            };
+            foreach (var cv in charVoiceSubs)
+            {
+                charVoiceCat.Subcategories.Add(new CategoryItem
+                {
+                    Name = cv.Name,
+                    IconPath = string.IsNullOrEmpty(cv.Icon) ? "" : GetCategoryIconPath(cv.Icon),
+                    FaIcon = string.IsNullOrEmpty(cv.Icon) ? FontAwesome5.EFontAwesomeIcon.Solid_Cog : FontAwesome5.EFontAwesomeIcon.Solid_User
+                });
+            }
+            sounds.Categories.Add(charVoiceCat);
+
+            var soundOtherCats = new string[]
+            {
+                "BGM",
+                "Sound Effects",
+                "Announcer",
+                "Counter",
+                "Wall Break",
+                "Round Intro",
+                "Heavy Mob Cemetery",
+                "Other/Misc"
+            };
+            foreach (var name in soundOtherCats)
+            {
+                sounds.Categories.Add(new CategoryItem
+                {
+                    Name = name,
+                    IconPath = "",
+                    FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog
+                });
+            }
+            _sections.Add(sounds);
+
+            // 7. WiPs
+            var wips = new SectionItem
+            {
+                Name = "WiPs",
+                IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/wips.png"),
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Wrench
+            };
+            var wipSubCats = new string[] { "Audio", "Skins", "Other/Misc" };
+            foreach (var name in wipSubCats)
+            {
+                wips.Categories.Add(new CategoryItem
+                {
+                    Name = name,
+                    IconPath = "",
+                    FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog
+                });
+            }
+            _sections.Add(wips);
+
+            // Kick off background GameBanana category synchronization
+            _ = Task.Run(SyncCategoriesWithGameBananaAsync);
+        }
+
+        private async Task SyncCategoriesWithGameBananaAsync()
+        {
+            try
+            {
+                string cacheDir = $@"{Global.assemblyLocation}{Global.s}Cache";
+                string iconsDir = $@"{cacheDir}{Global.s}Icons";
+                Directory.CreateDirectory(iconsDir);
+
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Striverum");
+
+                async Task<List<GbCategoryRecord>> FetchCategoryEndpoint(string endpoint)
+                {
+                    var list = new List<GbCategoryRecord>();
+                    int page = 1;
+                    while (true)
+                    {
+                        string url = $"https://gamebanana.com/apiv4/{endpoint}/ByGame?_aGameRowIds[]=11534&_sRecordSchema=Custom&_csvProperties=_idRow,_sName,_sProfileUrl,_sIconUrl,_idParentCategoryRow&_nPerpage=50&_nPage={page}";
+                        var response = await client.GetAsync(url);
+                        if (!response.IsSuccessStatusCode) break;
+                        var json = await response.Content.ReadAsStringAsync();
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.ValueKind != JsonValueKind.Array) break;
+                        int countThisPage = 0;
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            countThisPage++;
+                            var rec = new GbCategoryRecord();
+                            if (el.TryGetProperty("_idRow", out var idProp))
+                            {
+                                if (idProp.ValueKind == JsonValueKind.Number) rec._idRow = idProp.GetInt32();
+                                else if (int.TryParse(idProp.GetString(), out var id)) rec._idRow = id;
+                            }
+                            if (el.TryGetProperty("_sName", out var nameProp))
+                                rec._sName = nameProp.GetString();
+                            if (el.TryGetProperty("_sIconUrl", out var iconProp))
+                                rec._sIconUrl = iconProp.GetString();
+                            if (el.TryGetProperty("_sProfileUrl", out var profProp))
+                                rec._sProfileUrl = profProp.GetString();
+                            if (el.TryGetProperty("_idParentCategoryRow", out var parProp))
+                            {
+                                if (parProp.ValueKind == JsonValueKind.Number)
+                                    rec._idParentCategoryRow = parProp.GetInt32().ToString();
+                                else if (parProp.ValueKind == JsonValueKind.String)
+                                    rec._idParentCategoryRow = parProp.GetString();
+                            }
+                            list.Add(rec);
+                        }
+                        if (countThisPage < 50) break;
+                        page++;
+                    }
+                    return list;
+                }
+
+                var modItems = await FetchCategoryEndpoint("ModCategory");
+                var soundItems = await FetchCategoryEndpoint("SoundCategory");
+                var wipItems = await FetchCategoryEndpoint("WipCategory");
+
+                var totalList = new List<GbCategoryRecord>();
+                totalList.AddRange(modItems);
+                totalList.AddRange(soundItems);
+                totalList.AddRange(wipItems);
+
+                if (totalList.Count > 0)
+                {
+                    // Cache to disk
+                    string cacheFile = $@"{cacheDir}{Global.s}Categories_GGS.json";
+                    File.WriteAllText(cacheFile, JsonSerializer.Serialize(totalList));
+
+                    // Download missing icons in background
+                    foreach (var item in totalList)
+                    {
+                        if (!string.IsNullOrEmpty(item._sIconUrl))
+                        {
+                            try
+                            {
+                                string iconFileName = Path.GetFileName(new Uri(item._sIconUrl).LocalPath);
+                                string localPath = $@"{iconsDir}{Global.s}{iconFileName}";
+                                if (!File.Exists(localPath))
+                                {
+                                    var bytes = await client.GetByteArrayAsync(item._sIconUrl);
+                                    await File.WriteAllBytesAsync(localPath, bytes);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+
+                    // Apply to UI
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        ApplyGbCategories(modItems, soundItems, wipItems);
+                        UpdateModCounts();
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Global.logger.WriteLine($"GameBanana category sync: {ex.Message}", LoggerType.Warning);
+            }
+        }
+
+        private void ApplyGbCategories(List<GbCategoryRecord> allItems, List<GbCategoryRecord> soundItems = null, List<GbCategoryRecord> wipItems = null)
+        {
+            var roots = allItems.Where(x => x._idParentCategoryRow == null || x._idParentCategoryRow.ToString() == "0" || string.IsNullOrEmpty(x._idParentCategoryRow.ToString())).ToList();
+
+            foreach (var r in roots)
+            {
+                var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, r._sName));
+                if (sec == null)
+                {
+                    sec = new SectionItem
+                    {
+                        Name = r._sName,
+                        IconPath = GetCategoryIconPath(r._sIconUrl),
+                        FaIcon = GetSectionFaIcon(r._sName)
+                    };
+                    _sections.Add(sec);
+                }
+                else
+                {
+                    sec.IconPath = GetCategoryIconPath(r._sIconUrl);
+                }
+
+                var children = allItems.Where(x => x._idParentCategoryRow != null && x._idParentCategoryRow.ToString() == r._idRow.ToString()).ToList();
+                foreach (var child in children)
+                {
+                    var cat = sec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, child._sName));
+                    if (cat == null)
+                    {
+                        sec.Categories.Add(new CategoryItem
+                        {
+                            Name = child._sName,
+                            IconPath = GetCategoryIconPath(child._sIconUrl),
+                            FaIcon = GetCategoryFaIcon(child._sName)
+                        });
+                    }
+                    else
+                    {
+                        cat.IconPath = GetCategoryIconPath(child._sIconUrl);
+                    }
+                }
+            }
+
+            // Sync Sounds
+            if (soundItems != null && soundItems.Count > 0)
+            {
+                var soundSec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, "Sounds"));
+                if (soundSec == null)
+                {
+                    soundSec = new SectionItem
+                    {
+                        Name = "Sounds",
+                        IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/sounds.png"),
+                        FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_VolumeUp
+                    };
+                    _sections.Add(soundSec);
+                }
+                else
+                {
+                    soundSec.IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/sounds.png");
+                }
+
+                var charVoiceCat = soundSec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, "Character Voice"));
+                if (charVoiceCat == null)
+                {
+                    charVoiceCat = new CategoryItem
+                    {
+                        Name = "Character Voice",
+                        IconPath = "",
+                        FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog
+                    };
+                    soundSec.Categories.Insert(0, charVoiceCat);
+                }
+
+                foreach (var sItem in soundItems)
+                {
+                    bool isSubOfVoice = sItem._idParentCategoryRow == "4433";
+                    if (isSubOfVoice)
+                    {
+                        var existingSub = charVoiceCat.Subcategories.FirstOrDefault(c => CategoryMatches(c.Name, sItem._sName));
+                        if (existingSub == null)
+                        {
+                            charVoiceCat.Subcategories.Add(new CategoryItem
+                            {
+                                Name = sItem._sName,
+                                IconPath = GetCategoryIconPath(sItem._sIconUrl),
+                                FaIcon = string.IsNullOrEmpty(sItem._sIconUrl) ? FontAwesome5.EFontAwesomeIcon.Solid_Cog : FontAwesome5.EFontAwesomeIcon.Solid_User
+                            });
+                        }
+                        else if (!string.IsNullOrEmpty(sItem._sIconUrl))
+                        {
+                            existingSub.IconPath = GetCategoryIconPath(sItem._sIconUrl);
+                            existingSub.FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_User;
+                        }
+                    }
+                    else
+                    {
+                        var existing = soundSec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, sItem._sName));
+                        if (existing == null)
+                        {
+                            soundSec.Categories.Add(new CategoryItem
+                            {
+                                Name = sItem._sName,
+                                IconPath = GetCategoryIconPath(sItem._sIconUrl),
+                                FaIcon = string.IsNullOrEmpty(sItem._sIconUrl) ? FontAwesome5.EFontAwesomeIcon.Solid_Cog : FontAwesome5.EFontAwesomeIcon.Solid_Music
+                            });
+                        }
+                        else if (!string.IsNullOrEmpty(sItem._sIconUrl))
+                        {
+                            existing.IconPath = GetCategoryIconPath(sItem._sIconUrl);
+                        }
+                    }
+                }
+            }
+
+            // Sync WiPs
+            if (wipItems != null && wipItems.Count > 0)
+            {
+                var wipSec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, "WiPs"));
+                if (wipSec == null)
+                {
+                    wipSec = new SectionItem
+                    {
+                        Name = "WiPs",
+                        IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/wips.png"),
+                        FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Wrench
+                    };
+                    _sections.Add(wipSec);
+                }
+                else
+                {
+                    wipSec.IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/wips.png");
+                }
+
+                foreach (var wItem in wipItems)
+                {
+                    var existing = wipSec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, wItem._sName));
+                    if (existing == null)
+                    {
+                        wipSec.Categories.Add(new CategoryItem
+                        {
+                            Name = wItem._sName,
+                            IconPath = GetCategoryIconPath(wItem._sIconUrl),
+                            FaIcon = string.IsNullOrEmpty(wItem._sIconUrl) ? FontAwesome5.EFontAwesomeIcon.Solid_Cog : FontAwesome5.EFontAwesomeIcon.Solid_Cogs
+                        });
+                    }
+                    else if (!string.IsNullOrEmpty(wItem._sIconUrl))
+                    {
+                        existing.IconPath = GetCategoryIconPath(wItem._sIconUrl);
+                    }
+                }
+            }
+
+            if (Global.ModList != null)
+            {
+                foreach (var mod in Global.ModList)
+                {
+                    if (mod.TagItems != null)
+                    {
+                        foreach (var tagItem in mod.TagItems)
+                        {
+                            ResolveModTagIcon(tagItem, mod);
+                        }
+                    }
+                }
+            }
+        }
+
+        public void UpdateModCounts()
+        {
+            if (Global.ModList == null || _sections == null) return;
+
+            foreach (var sec in _sections)
+            {
+                // Update categories count
+                foreach (var cat in sec.Categories)
+                {
+                    if (cat.HasSubcategories)
+                    {
+                        foreach (var sub in cat.Subcategories)
+                        {
+                            sub.ModCount = Global.ModList.Count(m =>
+                                (!string.IsNullOrEmpty(m.subcategory) && CategoryMatches(m.subcategory, sub.Name)) ||
+                                (m.tags != null && m.tags.Any(t => CategoryMatches(t, sub.Name)))
+                            );
+                        }
+                        cat.ModCount = Global.ModList.Count(m =>
+                            (!string.IsNullOrEmpty(m.subcategory) && (CategoryMatches(m.subcategory, cat.Name) || cat.Subcategories.Any(sub => CategoryMatches(sub.Name, m.subcategory)))) ||
+                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name) || cat.Subcategories.Any(sub => CategoryMatches(sub.Name, t))))
+                        );
+                    }
+                    else
+                    {
+                        cat.ModCount = Global.ModList.Count(m =>
+                            (!string.IsNullOrEmpty(m.subcategory) && CategoryMatches(m.subcategory, cat.Name)) ||
+                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name)))
+                        );
+                    }
+                }
+
+                // Update section count (directly or through contained categories and subcategories)
+                sec.ModCount = Global.ModList.Count(m =>
+                    (!string.IsNullOrEmpty(m.cat) && CategoryMatches(m.cat, sec.Name)) ||
+                    (m.tags != null && m.tags.Any(t => CategoryMatches(t, sec.Name))) ||
+                    sec.Categories.Any(c =>
+                        (!string.IsNullOrEmpty(m.subcategory) && (CategoryMatches(m.subcategory, c.Name) || (c.HasSubcategories && c.Subcategories.Any(sub => CategoryMatches(sub.Name, m.subcategory))))) ||
+                        (m.tags != null && m.tags.Any(t => CategoryMatches(t, c.Name) || (c.HasSubcategories && c.Subcategories.Any(sub => CategoryMatches(sub.Name, t)))))
+                    )
+                );
+            }
+
+            UpdateBrowseSectionCounts();
+            UpdateBrowseCategoryPillCounts();
+        }
+
+        private bool ModFilter(object item)
+        {
+            Mod mod = item as Mod;
+            if (mod == null) return false;
+
+            // Nothing selected = show all
+            if (ActiveSections.Count == 0 && ActiveCategories.Count == 0)
+                return true;
+
+            // 1. If categories are selected, check if mod matches any active category
+            if (ActiveCategories.Count > 0)
+            {
+                if (!string.IsNullOrEmpty(mod.subcategory) && ActiveCategories.Any(ac => CategoryMatches(ac, mod.subcategory)))
+                    return true;
+                if (mod.tags != null && mod.tags.Any(t => ActiveCategories.Any(ac => CategoryMatches(ac, t))))
+                    return true;
+            }
+
+            // 2. If sections are selected, check if mod matches an active section with no specific categories active
+            if (ActiveSections.Count > 0)
+            {
+                var sectionsWithActiveCats = _sections
+                    .Where(s => s.Categories.Any(c => ActiveCategories.Any(ac => CategoryMatches(ac, c.Name))))
+                    .Select(s => s.Name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                string modSection = mod.cat;
+                if (string.IsNullOrEmpty(modSection) && mod.tags != null)
+                {
+                    modSection = _sections.FirstOrDefault(s => mod.tags.Any(t => CategoryMatches(t, s.Name)))?.Name;
+                }
+
+                if (!string.IsNullOrEmpty(modSection) && ActiveSections.Any(asSec => CategoryMatches(asSec, modSection)))
+                {
+                    if (!sectionsWithActiveCats.Contains(modSection))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void TagBubble_Click(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as System.Windows.Controls.Button;
+            var tagName = btn?.Tag?.ToString();
+            if (string.IsNullOrEmpty(tagName)) return;
+
+            InitDefaultSections();
+
+            bool isActiveCategory = ActiveCategories.Any(c => CategoryMatches(c, tagName));
+            bool isActiveSection = ActiveSections.Any(s => CategoryMatches(s, tagName));
+            bool isCurrentlyActive = isActiveCategory || isActiveSection;
+
+            if (isCurrentlyActive)
+            {
+                // Toggle OFF
+                if (isActiveCategory)
+                {
+                    ActiveCategories.RemoveWhere(c => CategoryMatches(c, tagName));
+                    foreach (var s in _sections)
+                    {
+                        foreach (var c in s.Categories.Where(cat => CategoryMatches(cat.Name, tagName)))
+                        {
+                            c.IsActive = false;
+                        }
+                    }
+
+                    // Check if parent section has any remaining active categories
+                    var parentSec = _sections.FirstOrDefault(s => s.Categories.Any(c => CategoryMatches(c.Name, tagName)));
+                    if (parentSec != null && !parentSec.Categories.Any(c => c.IsActive))
+                    {
+                        parentSec.IsActive = false;
+                        ActiveSections.RemoveWhere(s => CategoryMatches(s, parentSec.Name));
+                    }
+                }
+
+                if (isActiveSection)
+                {
+                    ActiveSections.RemoveWhere(s => CategoryMatches(s, tagName));
+                    var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
+                    if (sec != null)
+                    {
+                        sec.IsActive = false;
+                        foreach (var c in sec.Categories)
+                        {
+                            c.IsActive = false;
+                            ActiveCategories.RemoveWhere(ac => CategoryMatches(ac, c.Name));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Toggle ON
+                var parentSection = _sections.FirstOrDefault(s => s.Categories.Any(c => CategoryMatches(c.Name, tagName)));
+                if (parentSection != null)
+                {
+                    var cat = parentSection.Categories.FirstOrDefault(c => CategoryMatches(c.Name, tagName));
+                    if (cat != null) cat.IsActive = true;
+                    parentSection.IsActive = true;
+                    ActiveCategories.Add(cat != null ? cat.Name : tagName);
+                    ActiveSections.Add(parentSection.Name);
+
+                    // Switch sidebar to category view for this section
+                    if (CategoryPanel.Visibility != Visibility.Visible || _currentSection != parentSection)
+                    {
+                        AnimateToCategories(parentSection);
+                    }
+                }
+                else
+                {
+                    // Tag is a section name
+                    var sec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, tagName));
+                    if (sec != null)
+                    {
+                        sec.IsActive = true;
+                        ActiveSections.Add(sec.Name);
+                        if (sec.Categories.Count > 0 && (CategoryPanel.Visibility != Visibility.Visible || _currentSection != sec))
+                        {
+                            AnimateToCategories(sec);
+                        }
+                    }
+                    else
+                    {
+                        ActiveCategories.Add(tagName);
+                    }
+                }
+            }
+
+            UpdateModTagActiveStates();
+            RefreshModList();
+        }
+
+        private void SectionSidebar_ItemClicked(object sender, MouseButtonEventArgs e)
+        {
+            var item = (e.OriginalSource as FrameworkElement)?.DataContext as SectionItem;
+            if (item == null)
+            {
+                item = SectionSidebar.SelectedItem as SectionItem;
+                if (item == null) return;
+            }
+
+            // User requirement:
+            // "Jesli sekcja juz jest aktywna to jak nacisniemy jeszcze raz to to poprostu wylaczy ten tag sekcji z filtru"
+            if (item.IsActive)
+            {
+                item.IsActive = false;
+                ActiveSections.Remove(item.Name);
+                foreach (var c in item.Categories)
+                {
+                    c.IsActive = false;
+                    ActiveCategories.Remove(c.Name);
+                }
+                UpdateModTagActiveStates();
+                RefreshModList();
+            }
+            else
+            {
+                item.IsActive = true;
+                ActiveSections.Add(item.Name);
+                _currentSection = item;
+                if (item.Categories.Count > 0)
+                {
+                    AnimateToCategories(item);
+                }
+                UpdateModTagActiveStates();
+                RefreshModList();
+            }
+        }
+
+        private void CategorySidebar_ItemClicked(object sender, MouseButtonEventArgs e)
+        {
+            var cat = (e.OriginalSource as FrameworkElement)?.DataContext as CategoryItem;
+            if (cat == null)
+            {
+                cat = CategorySidebar.SelectedItem as CategoryItem;
+                if (cat == null) return;
+            }
+
+            if (cat.HasSubcategories)
+            {
+                // Drill down into subcategories (e.g. Character Voice -> characters)
+                _parentCategory = cat;
+                CategoryHeader.Text = cat.Name;
+                if (cat.HasImage && !string.IsNullOrEmpty(cat.IconPath))
+                {
+                    try
+                    {
+                        CategoryHeaderImage.Source = new BitmapImage(new Uri(cat.IconPath, UriKind.RelativeOrAbsolute));
+                        CategoryHeaderImage.Visibility = Visibility.Visible;
+                        CategoryHeaderIcon.Visibility = Visibility.Collapsed;
+                    }
+                    catch
+                    {
+                        CategoryHeaderIcon.Icon = cat.FaIcon;
+                        CategoryHeaderIcon.Visibility = Visibility.Visible;
+                        CategoryHeaderImage.Visibility = Visibility.Collapsed;
+                    }
+                }
+                else
+                {
+                    CategoryHeaderIcon.Icon = cat.FaIcon;
+                    CategoryHeaderIcon.Visibility = Visibility.Visible;
+                    CategoryHeaderImage.Visibility = Visibility.Collapsed;
+                }
+                CategorySidebar.ItemsSource = cat.Subcategories;
+                return;
+            }
+
+            cat.IsActive = !cat.IsActive;
+            if (cat.IsActive)
+            {
+                ActiveCategories.Add(cat.Name);
+                if (_parentCategory != null)
+                {
+                    ActiveCategories.Add(_parentCategory.Name);
+                }
+                if (_currentSection != null)
+                {
+                    _currentSection.IsActive = true;
+                    ActiveSections.Add(_currentSection.Name);
+                }
+            }
+            else
+            {
+                ActiveCategories.Remove(cat.Name);
+            }
+
+            UpdateModTagActiveStates();
+            RefreshModList();
+        }
+
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_parentCategory != null && _currentSection != null)
+            {
+                // Return from subcategories back to section's main categories
+                _parentCategory = null;
+                CategoryHeader.Text = _currentSection.Name;
+                if (_currentSection.HasImage && !string.IsNullOrEmpty(_currentSection.IconPath))
+                {
+                    try
+                    {
+                        CategoryHeaderImage.Source = new BitmapImage(new Uri(_currentSection.IconPath, UriKind.RelativeOrAbsolute));
+                        CategoryHeaderImage.Visibility = Visibility.Visible;
+                        CategoryHeaderIcon.Visibility = Visibility.Collapsed;
+                    }
+                    catch
+                    {
+                        CategoryHeaderIcon.Icon = _currentSection.FaIcon;
+                        CategoryHeaderIcon.Visibility = Visibility.Visible;
+                        CategoryHeaderImage.Visibility = Visibility.Collapsed;
+                    }
+                }
+                else
+                {
+                    CategoryHeaderIcon.Icon = _currentSection.FaIcon;
+                    CategoryHeaderIcon.Visibility = Visibility.Visible;
+                    CategoryHeaderImage.Visibility = Visibility.Collapsed;
+                }
+                CategorySidebar.ItemsSource = _currentSection.Categories;
+            }
+            else
+            {
+                _parentCategory = null;
+                AnimateToSections();
+            }
+        }
+
+        private void AnimateToCategories(SectionItem section)
+        {
+            if (section == null) return;
+            _parentCategory = null;
+            _currentSection = section;
+            CategoryHeader.Text = section.Name;
+            if (section.HasImage && !string.IsNullOrEmpty(section.IconPath))
+            {
+                try
+                {
+                    CategoryHeaderImage.Source = new BitmapImage(new Uri(section.IconPath, UriKind.RelativeOrAbsolute));
+                    CategoryHeaderImage.Visibility = Visibility.Visible;
+                    CategoryHeaderIcon.Visibility = Visibility.Collapsed;
+                }
+                catch
+                {
+                    CategoryHeaderIcon.Icon = section.FaIcon;
+                    CategoryHeaderIcon.Visibility = Visibility.Visible;
+                    CategoryHeaderImage.Visibility = Visibility.Collapsed;
+                }
+            }
+            else
+            {
+                CategoryHeaderIcon.Icon = section.FaIcon;
+                CategoryHeaderIcon.Visibility = Visibility.Visible;
+                CategoryHeaderImage.Visibility = Visibility.Collapsed;
+            }
+            CategorySidebar.ItemsSource = section.Categories;
+
+            CategoryPanel.Visibility = Visibility.Visible;
+            var duration = TimeSpan.FromMilliseconds(200);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var widthAnim = new DoubleAnimation(64, 190, duration) { EasingFunction = ease };
+            SidebarContainer.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
+
+            var secOpacity = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            var secTranslate = new DoubleAnimation(0, -30, duration) { EasingFunction = ease };
+            secOpacity.Completed += (s, e) => SectionPanel.Visibility = Visibility.Collapsed;
+            SectionPanel.BeginAnimation(UIElement.OpacityProperty, secOpacity);
+            SectionPanelTranslate.BeginAnimation(TranslateTransform.XProperty, secTranslate);
+
+            CategoryPanel.Opacity = 0;
+            CategoryPanelTranslate.X = 30;
+            var catOpacity = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            var catTranslate = new DoubleAnimation(30, 0, duration) { EasingFunction = ease };
+            CategoryPanel.BeginAnimation(UIElement.OpacityProperty, catOpacity);
+            CategoryPanelTranslate.BeginAnimation(TranslateTransform.XProperty, catTranslate);
+        }
+
+        private void AnimateToSections()
+        {
+            _parentCategory = null;
+            SectionPanel.Visibility = Visibility.Visible;
+            var duration = TimeSpan.FromMilliseconds(200);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var widthAnim = new DoubleAnimation(190, 64, duration) { EasingFunction = ease };
+            SidebarContainer.BeginAnimation(FrameworkElement.WidthProperty, widthAnim);
+
+            var catOpacity = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            var catTranslate = new DoubleAnimation(0, 30, duration) { EasingFunction = ease };
+            catOpacity.Completed += (s, e) => CategoryPanel.Visibility = Visibility.Collapsed;
+            CategoryPanel.BeginAnimation(UIElement.OpacityProperty, catOpacity);
+            CategoryPanelTranslate.BeginAnimation(TranslateTransform.XProperty, catTranslate);
+
+            SectionPanel.Opacity = 0;
+            SectionPanelTranslate.X = -30;
+            var secOpacity = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            var secTranslate = new DoubleAnimation(-30, 0, duration) { EasingFunction = ease };
+            SectionPanel.BeginAnimation(UIElement.OpacityProperty, secOpacity);
+            SectionPanelTranslate.BeginAnimation(TranslateTransform.XProperty, secTranslate);
+        }
+
+        private void UpdateModTagActiveStates()
+        {
+            if (Global.ModList == null) return;
+            foreach (var mod in Global.ModList)
+            {
+                if (mod.TagItems == null) continue;
+                foreach (var tag in mod.TagItems)
+                {
+                    tag.IsActive = ActiveCategories.Contains(tag.Name) || ActiveSections.Contains(tag.Name);
+                }
+            }
+        }
+
+        private void SectionSidebar_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+        private void CategorySidebar_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+
+        private void RefreshModList()
+        {
+            if (ModListView != null && ModListView.ItemsSource != null)
+            {
+                ICollectionView view = CollectionViewSource.GetDefaultView(ModListView.ItemsSource);
+                if (view != null)
+                {
+                    view.Filter = ModFilter;
+                    view.Refresh();
+                }
+            }
+        }
         public string version;
         // Separated from Global.config so that order is updated when datagrid is modified
         public List<string> exes;
         private FileSystemWatcher ModsWatcher;
         private FlowDocument defaultFlow = new FlowDocument();
-        private string defaultText = "Unverum Mod Manager is here to help out with all your UE4 Mods!\n\n" +
+        private string defaultText = "Striverum Mod Manager is here to help out with all your UE4 Mods!\n\n" +
             "(Right Click Row > Fetch Metadata and confirm the GameBanana URL of the mod to fetch metadata to show here.)";
         private ObservableCollection<String> LauncherOptions = new ObservableCollection<String>(new string[] { "Executable", "Steam" });
         public MainWindow()
@@ -44,10 +1189,20 @@ namespace Unverum
             Global.config = new();
 
             // Get Version Number
-            var UnverumVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
-            version = UnverumVersion.Substring(0, UnverumVersion.LastIndexOf('.'));
+            try
+            {
+                var StriverumVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
+                if (!string.IsNullOrEmpty(StriverumVersion) && StriverumVersion.Contains('.'))
+                    version = StriverumVersion.Substring(0, StriverumVersion.LastIndexOf('.'));
+                else
+                    version = "1.0.0";
+            }
+            catch
+            {
+                version = "1.0.0";
+            }
 
-            Global.logger.WriteLine($"Launched Unverum Mod Manager v{version}!", LoggerType.Info);
+            Global.logger.WriteLine($"Launched Striverum Mod Manager v{version}!", LoggerType.Info);
             // Get Global.config if it exists
             if (File.Exists($@"{Global.assemblyLocation}{Global.s}Config.json"))
             {
@@ -83,9 +1238,9 @@ namespace Unverum
             if (Global.config.BottomGridHeight != null)
                 MainGrid.RowDefinitions[3].Height = new GridLength((double)Global.config.BottomGridHeight, GridUnitType.Star);
             if (Global.config.LeftGridWidth != null)
-                MiddleGrid.ColumnDefinitions[0].Width = new GridLength((double)Global.config.LeftGridWidth, GridUnitType.Star);
+                MiddleGrid.ColumnDefinitions[1].Width = new GridLength((double)Global.config.LeftGridWidth, GridUnitType.Star);
             if (Global.config.RightGridWidth != null)
-                MiddleGrid.ColumnDefinitions[2].Width = new GridLength((double)Global.config.RightGridWidth, GridUnitType.Star);
+                MiddleGrid.ColumnDefinitions[3].Width = new GridLength((double)Global.config.RightGridWidth, GridUnitType.Star);
 
             Global.games = new List<string>();
             foreach (var item in GameBox.Items)
@@ -94,16 +1249,31 @@ namespace Unverum
                 Global.games.Add(game);
             }
 
+            if (Global.config.CurrentGame == "Dragon Ball FighterZ" || string.IsNullOrEmpty(Global.config.CurrentGame))
+            {
+                if (Global.config.Configs != null && Global.config.Configs.ContainsKey("Dragon Ball FighterZ"))
+                {
+                    if (!Global.config.Configs.ContainsKey("Guilty Gear -Strive-"))
+                    {
+                        Global.config.Configs["Guilty Gear -Strive-"] = Global.config.Configs["Dragon Ball FighterZ"];
+                    }
+                    Global.config.Configs.Remove("Dragon Ball FighterZ");
+                }
+                Global.config.CurrentGame = "Guilty Gear -Strive-";
+                Global.UpdateConfig();
+            }
+
             if (Global.config.Configs == null)
             {
-                Global.config.CurrentGame = (((GameBox.SelectedValue as ComboBoxItem).Content as StackPanel).Children[1] as TextBlock).Text.Trim().Replace(":", String.Empty);
+                Global.config.CurrentGame = "Guilty Gear -Strive-";
                 Global.config.Configs = new()
                 {
                     { Global.config.CurrentGame, new() }
                 };
             }
-            else
-                GameBox.SelectedIndex = Global.games.IndexOf(Global.config.CurrentGame);
+
+            int ggsIndex = Global.games.IndexOf(Global.config.CurrentGame);
+            GameBox.SelectedIndex = ggsIndex >= 0 ? ggsIndex : Global.games.IndexOf("Guilty Gear -Strive-");
 
             if (GameBox.SelectedIndex == 7)
                 DiscordButton.Visibility = Visibility.Collapsed;
@@ -173,13 +1343,25 @@ namespace Unverum
 
             defaultFlow.Blocks.Add(ConvertToFlowParagraph(defaultText));
             DescriptionWindow.Document = defaultFlow;
-            var bitmap = new BitmapImage(new Uri("pack://application:,,,/Unverum;component/Assets/unverumpreview.png"));
+            var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
             Preview.Source = bitmap;
             PreviewBG.Source = null;
 
+            BrowseSectionBar.ItemsSource = BrowseSections;
+            BrowseCategoryPillsBar.ItemsSource = BrowseCategoryPills;
+            GalleryItemsControl.ItemsSource = GalleryItems;
+            GalleryScroll.SizeChanged += (s, e) =>
+            {
+                if (DescPanel != null && DescPanel.Visibility == Visibility.Visible)
+                {
+                    UpdateGallerySelection(imageCounter);
+                }
+            };
+            InitBrowseSectionBar();
+
             Global.logger.WriteLine("Checking for updates...", LoggerType.Info);
             GameBox.IsEnabled = false;
-            ModGrid.IsEnabled = false;
+            ModListView.IsEnabled = false;
             ConfigButton.IsEnabled = false;
             LaunchButton.IsEnabled = false;
             OpenModsButton.IsEnabled = false;
@@ -187,7 +1369,6 @@ namespace Unverum
             EditLoadoutsButton.IsEnabled = false;
             LoadoutsBox.IsEnabled = false;
             LauncherOptionsBox.IsEnabled = false;
-            ModGridSearchButton.IsEnabled = false;
             App.Current.Dispatcher.Invoke(() =>
             {
                 ModUpdater.CheckForUpdates($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", this);
@@ -263,11 +1444,100 @@ namespace Unverum
                 }
             }
 
+            InitDefaultSections();
+
+            // Load metadata for each mod and build TagItems
+            foreach (var mod in Global.ModList)
+            {
+                string modJsonPath = $@"{currentModDirectory}{Global.s}{mod.name}{Global.s}mod.json";
+                if (File.Exists(modJsonPath))
+                {
+                    try
+                    {
+                        var meta = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(modJsonPath));
+                        if (meta != null)
+                        {
+                            mod.cat = meta.cat;
+                            mod.subcategory = meta.subcategory;
+                            mod.caticon = meta.caticon;
+                            mod.tags = meta.tags ?? new List<string>();
+                            if (!string.IsNullOrEmpty(mod.cat) && !mod.tags.Contains(mod.cat))
+                                mod.tags.Insert(0, mod.cat);
+                            if (!string.IsNullOrEmpty(mod.subcategory) && !mod.tags.Contains(mod.subcategory))
+                                mod.tags.Add(mod.subcategory);
+
+                            if (meta.caticon != null)
+                            {
+                                string iconFileName = Path.GetFileName(meta.caticon.LocalPath);
+                                string iconCachePath = $@"{Global.assemblyLocation}{Global.s}Cache{Global.s}Icons{Global.s}{iconFileName}";
+                                if (File.Exists(iconCachePath))
+                                    mod.cachedIconPath = iconCachePath;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // If subcategory has an icon, attach it to the CategoryItem in _sections
+                if (!string.IsNullOrEmpty(mod.subcategory) && (mod.cachedIconPath != null || mod.caticon != null))
+                {
+                    foreach (var sec in _sections)
+                    {
+                        var cat = sec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, mod.subcategory));
+                        if (cat != null && string.IsNullOrEmpty(cat.IconPath))
+                        {
+                            cat.IconPath = mod.cachedIconPath ?? mod.caticon?.ToString();
+                        }
+                    }
+                }
+
+                // Ensure custom section or category from mod exists in _sections
+                if (!string.IsNullOrEmpty(mod.cat))
+                {
+                    var existingSec = _sections.FirstOrDefault(s => CategoryMatches(s.Name, mod.cat));
+                    if (existingSec == null)
+                    {
+                        existingSec = new SectionItem { Name = mod.cat, FaIcon = GetSectionFaIcon(mod.cat) };
+                        _sections.Add(existingSec);
+                    }
+                    if (!string.IsNullOrEmpty(mod.subcategory))
+                    {
+                        var existingCat = existingSec.Categories.FirstOrDefault(c => CategoryMatches(c.Name, mod.subcategory));
+                        if (existingCat == null)
+                        {
+                            existingSec.Categories.Add(new CategoryItem
+                            {
+                                Name = mod.subcategory,
+                                IconPath = mod.cachedIconPath ?? mod.caticon?.ToString(),
+                                FaIcon = GetCategoryFaIcon(mod.subcategory)
+                            });
+                        }
+                    }
+                }
+
+                // Populate TagItems with resolved icons
+                mod.TagItems.Clear();
+                if (mod.tags != null)
+                {
+                    foreach (var tag in mod.tags)
+                    {
+                        var tagItem = new ModTag { Name = tag };
+                        ResolveModTagIcon(tagItem, mod);
+                        tagItem.IsActive = ActiveCategories.Contains(tag) || ActiveSections.Contains(tag);
+                        mod.TagItems.Add(tagItem);
+                    }
+                }
+            }
+
+            UpdateModCounts();
+
             await Task.Run(() =>
             {
                 App.Current.Dispatcher.Invoke((Action)delegate
                 {
-                    ModGrid.ItemsSource = Global.ModList;
+                    SectionSidebar.ItemsSource = _sections;
+                    ModListView.ItemsSource = Global.ModList;
+                    RefreshModList();
                     Stats.Text = $"{Global.ModList.Count} mods • {Directory.GetFiles($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", "*", SearchOption.AllDirectories).Length.ToString("N0")} files • " +
                     $"{StringConverters.FormatSize(new DirectoryInfo($@"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}").GetDirectorySize())} • v{version}";
                 });
@@ -370,7 +1640,7 @@ namespace Unverum
             }
         }
         // Triggered when priority is switched on drag and dropped
-        private void ModGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        private void ModListView_LoadingRow(object sender, DataGridRowEventArgs e)
         {
             Global.UpdateConfig();
         }
@@ -386,41 +1656,7 @@ namespace Unverum
                 emu = LauncherOptionsBox.SelectedIndex == 0;
                 epic = LauncherOptionsBox.SelectedIndex == 2;
             });
-            var game = (GameFilter)index;
-            switch (game)
-            {
-                case GameFilter.DBFZ:
-                    return Setup.DBFZ();
-                case GameFilter.DBSZ:
-                    return Setup.Generic("SparkingZERO.exe", "SparkingZERO", @"C:\Program Files (x86)\Steam\steamapps\common\DRAGON BALL Sparking! ZERO\SparkingZERO.exe", steamId: "1790600");
-                case GameFilter.MHOJ2:
-                    return Setup.Win64FolderSetup("MHOJ2.exe", "HeroGame", "My Hero Ones Justice 2", "1058450");
-                case GameFilter.GBVS:
-                    return Setup.Generic("GBVS.exe", "RED", @"C:\Program Files (x86)\Steam\steamapps\common\Granblue Fantasy Versus\GBVS.exe", steamId: "1090630");
-                case GameFilter.GBVSR:
-                    return Setup.GBVSR();
-                case GameFilter.GGS:
-                    return Setup.Generic("GGST.exe", "RED", @"C:\Program Files (x86)\Steam\steamapps\common\GUILTY GEAR -STRIVE-\GGST.exe", steamId: "1384160");
-                case GameFilter.JF:
-                    return Setup.JF();
-                case GameFilter.KHIII:
-                    return Setup.KHIII();
-                case GameFilter.SN:
-                    return Setup.Generic("ScarletNexus.exe", "ScarletNexus", @"C:\Program Files (x86)\Steam\steamapps\common\ScarletNexus\ScarletNexus.exe", steamId: "775500");
-                case GameFilter.ToA:
-                    return Setup.Win64FolderSetup("Tales of Arise.exe", "Arise", "Tales of Arise", "740130");
-                case GameFilter.DS:
-                    return Setup.Generic("APK.exe", "APK", @"C:\Program Files (x86)\Steam\steamapps\common\Demon Slayer\APK.exe", steamId: "1490890");
-                case GameFilter.IM:
-                    return Setup.Generic("StarlitSeason.exe", "StarlitSeason", @"C:\Program Files (x86)\Steam\steamapps\common\StarlitSeason\StarlitSeason.exe", steamId: "1046480");
-                case GameFilter.SMTV:
-                    return Setup.SMTV(emu);
-                case GameFilter.KOFXV:
-                    return Setup.Generic("KOFXV_Steam.exe", "KOFXV", @"C:\Program Files (x86)\Steam\steamapps\common\THE KING OF FIGHTERS XV\KOFXV_Steam.exe", "KOFXV.exe", "1498570", epic);
-                case GameFilter.DNF:
-                    return Setup.Generic("DNFDuel.exe", "RED", @"C:\Program Files (x86)\Steam\steamapps\common\DNFDuel\DNFDuel.exe", steamId: "1216060");
-            }
-            return false;
+            return Setup.Generic("GGST.exe", "RED", @"C:\Program Files (x86)\Steam\steamapps\common\GUILTY GEAR -STRIVE-\GGST.exe", steamId: "1384160");
         }
 
         private async void Setup_Click(object sender, RoutedEventArgs e)
@@ -481,7 +1717,7 @@ namespace Unverum
             if (Global.config.Configs[Global.config.CurrentGame].ModsFolder != null)
             {
                 GameBox.IsEnabled = false;
-                ModGrid.IsEnabled = false;
+                ModListView.IsEnabled = false;
                 ConfigButton.IsEnabled = false;
                 LaunchButton.IsEnabled = false;
                 OpenModsButton.IsEnabled = false;
@@ -489,16 +1725,15 @@ namespace Unverum
                 EditLoadoutsButton.IsEnabled = false;
                 LoadoutsBox.IsEnabled = false;
                 LauncherOptionsBox.IsEnabled = false;
-                ModGridSearchButton.IsEnabled = false;
                 Refresh();
-                // Check if mods from before Unverum install existed
+                // Check if mods from before Striverum install existed
                 Regex regex = new Regex(@"(^~*[a-z]$|^--Base--$)");
                 var manuallyInstalledMods = Directory.GetDirectories(Global.config.Configs[Global.config.CurrentGame].ModsFolder)
                 .Where(folder => !regex.IsMatch(Path.GetFileName(folder)));
                 if (manuallyInstalledMods.Count() > 0)
                 {
-                    var dialogResult = MessageBox.Show($@"Unverum detected manually installed mods in {Global.config.Configs[Global.config.CurrentGame].ModsFolder}. " +
-                        $@"Would you like to copy over these mods to Unverum before it DELETES them?", $@"Notification", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var dialogResult = MessageBox.Show($@"Striverum detected manually installed mods in {Global.config.Configs[Global.config.CurrentGame].ModsFolder}. " +
+                        $@"Would you like to copy over these mods to Striverum before it DELETES them?", $@"Notification", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (dialogResult == MessageBoxResult.Yes)
                     {
                         foreach (var manuallyInstalledMod in manuallyInstalledMods)
@@ -511,7 +1746,7 @@ namespace Unverum
                 if (!await Build(Global.config.Configs[Global.config.CurrentGame].ModsFolder))
                 {
                     Global.logger.WriteLine($"Failed to build loadout, not building and launching", LoggerType.Error);
-                    ModGrid.IsEnabled = true;
+                    ModListView.IsEnabled = true;
                     ConfigButton.IsEnabled = true;
                     LaunchButton.IsEnabled = true;
                     OpenModsButton.IsEnabled = true;
@@ -519,12 +1754,11 @@ namespace Unverum
                     GameBox.IsEnabled = true;
                     EditLoadoutsButton.IsEnabled = true;
                     LoadoutsBox.IsEnabled = true;
-                    ModGridSearchButton.IsEnabled = true;
                     if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
                         LauncherOptionsBox.IsEnabled = true;
                     return;
                 }
-                ModGrid.IsEnabled = true;
+                ModListView.IsEnabled = true;
                 ConfigButton.IsEnabled = true;
                 LaunchButton.IsEnabled = true;
                 OpenModsButton.IsEnabled = true;
@@ -532,7 +1766,6 @@ namespace Unverum
                 GameBox.IsEnabled = true;
                 EditLoadoutsButton.IsEnabled = true;
                 LoadoutsBox.IsEnabled = true;
-                ModGridSearchButton.IsEnabled = true;
                 if (!Global.config.CurrentGame.Equals("Dragon Ball FighterZ", StringComparison.InvariantCultureIgnoreCase))
                     LauncherOptionsBox.IsEnabled = true;
             }
@@ -582,64 +1815,8 @@ namespace Unverum
                     Global.UpdateConfig();
                     if (Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex > 0)
                     {
-                        var id = "";
+                        var id = "1384160";
                         var epic = false;
-                        switch ((GameFilter)GameBox.SelectedIndex)
-                        {
-                            case GameFilter.DBFZ:
-                                Global.logger.WriteLine($"Mods will not work since DBFZ is being launched through Steam", LoggerType.Warning);
-                                id = "678950";
-                                break;
-                            case GameFilter.DBSZ:
-                                id = "1790600";
-                                break;
-                            case GameFilter.MHOJ2:
-                                id = "1058450";
-                                break;
-                            case GameFilter.GBVS:
-                                id = "1090630";
-                                break;
-                            case GameFilter.GBVSR:
-                                if (!path.ToLowerInvariant().Contains("demo"))
-                                    id = "2157560";
-                                else
-                                    id = "2667960";
-                                break;
-                            case GameFilter.GGS:
-                                id = "1384160";
-                                break;
-                            case GameFilter.JF:
-                                id = "816020";
-                                break;
-                            case GameFilter.KHIII:
-                                id = "fd711544a06543e0ab1b0808de334120";
-                                epic = true;
-                                break;
-                            case GameFilter.SN:
-                                id = "775500";
-                                break;
-                            case GameFilter.ToA:
-                                id = "740130";
-                                break;
-                            case GameFilter.DS:
-                                id = "1490890";
-                                break;
-                            case GameFilter.IM:
-                                id = "1046480";
-                                break;
-                            case GameFilter.KOFXV:
-                                if (Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex == 1)
-                                    id = "1498570";
-                                else
-                                {
-                                    id = "f5b2914039804366b7e696b46040ce25";
-                                    epic = true;
-                                }
-                                break;
-                            case GameFilter.DNF:
-                                id = "1216060";
-                                break;
-                        }
                         path = epic ? $"com.epicgames.launcher://apps/{id}?action=launch&silent=true" : $"steam://rungameid/{id}";
                     }
                     Global.logger.WriteLine($"Launching {path}", LoggerType.Info);
@@ -649,8 +1826,7 @@ namespace Unverum
                         UseShellExecute = true,
                         Verb = "open"
                     };
-                    if (Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex == 0 && (GameFilter)GameBox.SelectedIndex == GameFilter.GBVSR)
-                        ps.Arguments = "-fileopenlog";
+
                     Process.Start(ps);
                 }
                 catch (Exception ex)
@@ -663,55 +1839,7 @@ namespace Unverum
         }
         private void GameBanana_Click(object sender, RoutedEventArgs e)
         {
-            var id = "";
-            switch ((GameFilter)GameFilterBox.SelectedIndex)
-            {
-                case GameFilter.DBFZ:
-                    id = "6246";
-                    break;
-                case GameFilter.DBSZ:
-                    id = "21179";
-                    break;
-                case GameFilter.MHOJ2:
-                    id = "11605";
-                    break;
-                case GameFilter.GBVS:
-                    id = "8897";
-                    break;
-                case GameFilter.GBVSR:
-                    id = "19552";
-                    break;
-                case GameFilter.GGS:
-                    id = "11534";
-                    break;
-                case GameFilter.JF:
-                    id = "7019";
-                    break;
-                case GameFilter.KHIII:
-                    id = "9219";
-                    break;
-                case GameFilter.SN:
-                    id = "12028";
-                    break;
-                case GameFilter.ToA:
-                    id = "13821";
-                    break;
-                case GameFilter.DS:
-                    id = "14246";
-                    break;
-                case GameFilter.IM:
-                    id = "14247";
-                    break;
-                case GameFilter.SMTV:
-                    id = "14768";
-                    break;
-                case GameFilter.KOFXV:
-                    id = "15769";
-                    break;
-                case GameFilter.DNF:
-                    id = "16693";
-                    break;
-            }
+            var id = "11534";
             try
             {
                 var ps = new ProcessStartInfo($"https://gamebanana.com/games/{id}")
@@ -758,7 +1886,7 @@ namespace Unverum
             ConsoleWindow.ScrollToEnd();
         }
 
-        private void ModGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        private void ModListView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
             FrameworkElement element = sender as FrameworkElement;
             if (element == null)
@@ -766,7 +1894,7 @@ namespace Unverum
                 return;
             }
 
-            if (ModGrid.SelectedItem == null)
+            if (ModListView.SelectedItem == null)
                 element.ContextMenu.Visibility = Visibility.Collapsed;
             else
                 element.ContextMenu.Visibility = Visibility.Visible;
@@ -774,7 +1902,7 @@ namespace Unverum
 
         private async void DeleteItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModGrid.SelectedItems;
+            var selectedMods = ModListView.SelectedItems;
             var temp = new Mod[selectedMods.Count];
             selectedMods.CopyTo(temp, 0);
             foreach (var row in temp)
@@ -818,28 +1946,13 @@ namespace Unverum
                     SoundsFolder = $"{ContentFolder}{Global.s}Sound";
                 else if (Directory.Exists($"{ContentFolder}{Global.s}CriWareData"))
                     SoundsFolder = $"{ContentFolder}{Global.s}CriWareData";
-                // DBFZ specific
                 bool? Patched = null;
-                if (Global.config.CurrentGame == "Dragon Ball FighterZ"
-                    || Global.config.CurrentGame == "Scarlet Nexus"
-                    || Global.config.CurrentGame == "Dragon Ball Sparking! ZERO")
-                    Patched = Setup.CheckPatch(Global.config.Configs[Global.config.CurrentGame].Launcher);
                 if (!ModLoader.Restart(path, MoviesFolder, SplashFolder, SoundsFolder))
                     return false;
                 var mods = Global.config.Configs[Global.config.CurrentGame].ModList.Where(x => x.enabled).ToList();
                 mods.Reverse();
 
-                // Rename HeroGame back since its no longer needed to be renamed
-                var index = 0;
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    index = GameBox.SelectedIndex;
-                });
-                if ((GameFilter)index == GameFilter.MHOJ2)
-                    foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Global.config.Configs[Global.config.CurrentGame].ModsFolder), "*", SearchOption.TopDirectoryOnly))
-                        if (Path.GetExtension(file).Equals(".pak", StringComparison.InvariantCultureIgnoreCase)
-                            || Path.GetExtension(file).Equals(".sig", StringComparison.InvariantCultureIgnoreCase))
-                            File.Move(file, file.Replace("HeroGame.", "HeroGame-WindowsNoEditor_0_P.", StringComparison.InvariantCultureIgnoreCase), true);
+
 
                 ModLoader.Build(path, mods, Patched, MoviesFolder, SplashFolder, SoundsFolder);
                 return true;
@@ -862,15 +1975,15 @@ namespace Unverum
             }
             Global.config.TopGridHeight = MainGrid.RowDefinitions[1].Height.Value;
             Global.config.BottomGridHeight = MainGrid.RowDefinitions[3].Height.Value;
-            Global.config.LeftGridWidth = MiddleGrid.ColumnDefinitions[0].Width.Value;
-            Global.config.RightGridWidth = MiddleGrid.ColumnDefinitions[2].Width.Value;
+            Global.config.LeftGridWidth = MiddleGrid.ColumnDefinitions[1].Width.Value;
+            Global.config.RightGridWidth = MiddleGrid.ColumnDefinitions[3].Width.Value;
             Global.UpdateConfig();
             Application.Current.Shutdown();
         }
 
         private void OpenItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModGrid.SelectedItems;
+            var selectedMods = ModListView.SelectedItems;
             var temp = new Mod[selectedMods.Count];
             selectedMods.CopyTo(temp, 0);
             foreach (var row in temp)
@@ -893,7 +2006,7 @@ namespace Unverum
         }
         private void EditItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModGrid.SelectedItems;
+            var selectedMods = ModListView.SelectedItems;
             var temp = new Mod[selectedMods.Count];
             selectedMods.CopyTo(temp, 0);
 
@@ -907,14 +2020,13 @@ namespace Unverum
                 }
             ModsWatcher.EnableRaisingEvents = true;
             Global.UpdateConfig();
-            ModGrid.Items.Refresh();
+            ModListView.Items.Refresh();
         }
         private void ConfigurePaksItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModGrid.SelectedItems;
+            var selectedMods = ModListView.SelectedItems;
             var temp = new Mod[selectedMods.Count];
             selectedMods.CopyTo(temp, 0);
-            bool edited = false;
             foreach (var row in temp)
                 if (row != null)
                 {
@@ -927,7 +2039,7 @@ namespace Unverum
         }
         private void FetchItem_Click(object sender, RoutedEventArgs e)
         {
-            var selectedMods = ModGrid.SelectedItems;
+            var selectedMods = ModListView.SelectedItems;
             var temp = new Mod[selectedMods.Count];
             selectedMods.CopyTo(temp, 0);
             foreach (var row in temp)
@@ -945,13 +2057,13 @@ namespace Unverum
             {
                 e.Handled = true;
                 e.Effects = DragDropEffects.Move;
-                DropBox.Visibility = Visibility.Visible;
+                
             }
         }
         private void Add_Leave(object sender, DragEventArgs e)
         {
             e.Handled = true;
-            DropBox.Visibility = Visibility.Collapsed;
+
         }
         private void Add_Drop(object sender, DragEventArgs e)
         {
@@ -961,7 +2073,7 @@ namespace Unverum
                 string[] fileList = (string[])e.Data.GetData(DataFormats.FileDrop, false);
                 CreateMod(fileList);
             }
-            DropBox.Visibility = Visibility.Collapsed;
+
         }
         private void CreateMod(string[] files)
         {
@@ -1028,15 +2140,17 @@ namespace Unverum
             {
                 OptionText = "Create New Mod",
                 OptionSubText = "Name a mod and choose the .pak file for it to use",
-                Index = 0
+                Index = 0,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Plus
             });
             choices.Add(new Choice()
             {
                 OptionText = "Open Mods Folder",
                 OptionSubText = "Drag or extract mod folders into this directory",
-                Index = 1
+                Index = 1,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_FolderOpen
             });
-            var choice = new ChoiceWindow(choices);
+            var choice = new ChoiceWindow(choices, "Add Mods");
             choice.ShowDialog();
             if (choice.choice != null && (int)choice.choice == 0)
             {
@@ -1085,7 +2199,7 @@ namespace Unverum
         {
             Global.logger.WriteLine("Checking for updates...", LoggerType.Info);
             GameBox.IsEnabled = false;
-            ModGrid.IsEnabled = false;
+            ModListView.IsEnabled = false;
             ConfigButton.IsEnabled = false;
             LaunchButton.IsEnabled = false;
             OpenModsButton.IsEnabled = false;
@@ -1093,7 +2207,6 @@ namespace Unverum
             EditLoadoutsButton.IsEnabled = false;
             LoadoutsBox.IsEnabled = false;
             LauncherOptionsBox.IsEnabled = false;
-            ModGridSearchButton.IsEnabled = false;
             App.Current.Dispatcher.Invoke(() =>
             {
                 ModUpdater.CheckForUpdates($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}", this);
@@ -1109,7 +2222,6 @@ namespace Unverum
             var paragraph = new Paragraph();
             flowDocument.Blocks.Add(paragraph);
 
-
             foreach (var segment in regex.Split(text))
             {
                 if (matches.Contains(segment))
@@ -1117,17 +2229,30 @@ namespace Unverum
                     var hyperlink = new Hyperlink(new Run(segment))
                     {
                         NavigateUri = new Uri(segment),
+                        Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)),
+                        Cursor = Cursors.Hand
                     };
 
-                    hyperlink.RequestNavigate += (sender, args) =>
+                    void OpenUrl(object s, RoutedEventArgs a)
                     {
-                        var ps = new ProcessStartInfo(segment)
+                        try
                         {
-                            UseShellExecute = true,
-                            Verb = "open"
-                        };
-                        Process.Start(ps);
-                    };
+                            var ps = new ProcessStartInfo(segment)
+                            {
+                                UseShellExecute = true,
+                                Verb = "open"
+                            };
+                            Process.Start(ps);
+                        }
+                        catch (Exception ex)
+                        {
+                            Global.logger.WriteLine($"Couldn't open up {segment} ({ex.Message})", LoggerType.Error);
+                        }
+                        a.Handled = true;
+                    }
+
+                    hyperlink.RequestNavigate += (s, a) => OpenUrl(s, a);
+                    hyperlink.Click += (s, a) => OpenUrl(s, a);
 
                     paragraph.Inlines.Add(hyperlink);
                 }
@@ -1145,7 +2270,7 @@ namespace Unverum
             if (mod == null || !File.Exists($"{Global.assemblyLocation}{Global.s}Mods{Global.s}{Global.config.CurrentGame}{Global.s}{mod}{Global.s}mod.json"))
             {
                 DescriptionWindow.Document = defaultFlow;
-                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Unverum;component/Assets/unverumpreview.png"));
+                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
                 Preview.Source = bitmap;
                 PreviewBG.Source = null;
             }
@@ -1191,7 +2316,7 @@ namespace Unverum
                 }
                 else
                 {
-                    var bitmap = new BitmapImage(new Uri("pack://application:,,,/Unverum;component/Assets/unverumpreview.png"));
+                    var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
                     Preview.Source = bitmap;
                     PreviewBG.Source = null;
                 }
@@ -1221,18 +2346,24 @@ namespace Unverum
                 descriptionText.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Center);
             }
         }
-        private void ModGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ModListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            Mod row = (Mod)ModGrid.SelectedItem;
+            Mod row = (Mod)ModListView.SelectedItem;
             if (row != null)
                 ShowMetadata(row.name);
+        }
+        private void ModGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ModListView_SelectionChanged(sender, e);
         }
 
         private void Download_Click(object sender, RoutedEventArgs e)
         {
+            if (e != null) e.Handled = true;
             Button button = sender as Button;
-            var item = button.DataContext as GameBananaRecord;
-            new ModDownloader().BrowserDownload(Global.games[GameFilterBox.SelectedIndex], item);
+            var item = button?.DataContext as GameBananaRecord;
+            if (item != null)
+                new ModDownloader().BrowserDownload(Global.games[0], item);
         }
         private void AltDownload_Click(object sender, RoutedEventArgs e)
         {
@@ -1272,7 +2403,6 @@ namespace Unverum
             var paragraph = new Paragraph();
             flowDocument.Blocks.Add(paragraph);
 
-
             foreach (var segment in regex.Split(text))
             {
                 if (matches.Contains(segment))
@@ -1280,9 +2410,30 @@ namespace Unverum
                     var hyperlink = new Hyperlink(new Run(segment))
                     {
                         NavigateUri = new Uri(segment),
+                        Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)),
+                        Cursor = Cursors.Hand
                     };
 
-                    hyperlink.RequestNavigate += (sender, args) => Process.Start(segment);
+                    void OpenUrl(object s, RoutedEventArgs a)
+                    {
+                        try
+                        {
+                            var ps = new ProcessStartInfo(segment)
+                            {
+                                UseShellExecute = true,
+                                Verb = "open"
+                            };
+                            Process.Start(ps);
+                        }
+                        catch (Exception ex)
+                        {
+                            Global.logger.WriteLine($"Couldn't open up {segment} ({ex.Message})", LoggerType.Error);
+                        }
+                        a.Handled = true;
+                    }
+
+                    hyperlink.RequestNavigate += (s, a) => OpenUrl(s, a);
+                    hyperlink.Click += (s, a) => OpenUrl(s, a);
 
                     paragraph.Inlines.Add(hyperlink);
                 }
@@ -1294,11 +2445,37 @@ namespace Unverum
 
             return flowDocument;
         }
+
+        private void ModTile_Click(object sender, MouseButtonEventArgs e)
+        {
+            // If the user clicked on a button inside the tile (e.g. Download), let the button handle it
+            DependencyObject source = e.OriginalSource as DependencyObject;
+            while (source != null && source != sender)
+            {
+                if (source is System.Windows.Controls.Button || source is System.Windows.Controls.Primitives.ButtonBase)
+                    return;
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            FrameworkElement elem = sender as FrameworkElement;
+            if (elem?.DataContext is GameBananaRecord record)
+            {
+                OpenModDetails(record);
+            }
+        }
+
         private void MoreInfo_Click(object sender, RoutedEventArgs e)
         {
-            HomepageButton.Content = $"{(TypeBox.SelectedValue as ComboBoxItem).Content.ToString().Trim().TrimEnd('s')} Page";
             Button button = sender as Button;
-            var item = button.DataContext as GameBananaRecord;
+            var item = button?.DataContext as GameBananaRecord;
+            if (item != null)
+                OpenModDetails(item);
+        }
+
+        private void OpenModDetails(GameBananaRecord item)
+        {
+            if (item == null) return;
+            HomepageButton.Content = $"{(TypeBox.SelectedValue as ComboBoxItem)?.Content.ToString().Trim().TrimEnd('s')} Page";
             if (item.Compatible)
                 DownloadButton.Visibility = Visibility.Visible;
             else
@@ -1307,8 +2484,8 @@ namespace Unverum
                 AltButton.Visibility = Visibility.Visible;
             else
                 AltButton.Visibility = Visibility.Collapsed;
-            DescPanel.DataContext = button.DataContext;
-            MediaPanel.DataContext = button.DataContext;
+            DescPanel.DataContext = item;
+            MediaPanel.DataContext = item;
             DescText.ScrollToHome();
             var text = "";
             text += item.ConvertedText;
@@ -1317,45 +2494,48 @@ namespace Unverum
             ImageRight.IsEnabled = true;
             BigImageLeft.IsEnabled = true;
             BigImageRight.IsEnabled = true;
-            imageCount = item.Media.Where(x => x.Type == "image").ToList().Count;
-            imageCounter = 0;
-            if (imageCount > 0)
+            GalleryItems.Clear();
+            var images = item.Media?.Where(x => x.Type == "image").ToList();
+            if (images != null && images.Count > 0)
             {
-                Grid.SetColumnSpan(DescText, 1);
+                imageCount = images.Count;
+                for (int i = 0; i < images.Count; i++)
+                {
+                    string fileName = "";
+                    try
+                    {
+                        fileName = System.IO.Path.GetFileName(images[i].File?.OriginalString ?? images[i].File?.ToString() ?? "");
+                    }
+                    catch { }
+
+                    string title = !string.IsNullOrEmpty(fileName) && !fileName.All(char.IsDigit)
+                        ? $"{fileName} ({i + 1}/{images.Count})"
+                        : $"Image {i + 1} of {images.Count}";
+
+                    GalleryItems.Add(new CoverFlowItem
+                    {
+                        Index = i,
+                        ImageUrl = $"{images[i].Base}/{images[i].File}",
+                        Title = title,
+                        Caption = images[i].Caption,
+                        IsSelected = (i == 0)
+                    });
+                }
                 ImagePanel.Visibility = Visibility.Visible;
-                var image = new BitmapImage(new Uri($"{item.Media[imageCounter].Base}/{item.Media[imageCounter].File}"));
-                Screenshot.Source = image;
-                BigScreenshot.Source = image;
-                CaptionText.Text = item.Media[imageCounter].Caption;
-                BigCaptionText.Text = item.Media[imageCounter].Caption;
-                if (!String.IsNullOrEmpty(CaptionText.Text))
-                {
-                    BigCaptionText.Visibility = Visibility.Visible;
-                    CaptionText.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    BigCaptionText.Visibility = Visibility.Collapsed;
-                    CaptionText.Visibility = Visibility.Collapsed;
-                }
+                UpdateGallerySelection(0);
             }
             else
             {
-                Grid.SetColumnSpan(DescText, 2);
+                imageCount = 0;
+                imageCounter = 0;
                 ImagePanel.Visibility = Visibility.Collapsed;
-            }
-            if (imageCount == 1)
-            {
-                ImageLeft.IsEnabled = false;
-                ImageRight.IsEnabled = false;
-                BigImageLeft.IsEnabled = false;
-                BigImageRight.IsEnabled = false;
             }
 
             DescPanel.Visibility = Visibility.Visible;
         }
         private void CloseDesc_Click(object sender, RoutedEventArgs e)
         {
+            MediaPanel.Visibility = Visibility.Collapsed;
             DescPanel.Visibility = Visibility.Collapsed;
         }
         private void CloseMedia_Click(object sender, RoutedEventArgs e)
@@ -1368,49 +2548,93 @@ namespace Unverum
             MediaPanel.Visibility = Visibility.Visible;
         }
 
-        private void ImageLeft_Click(object sender, RoutedEventArgs e)
+        private void UpdateGallerySelection(int newIndex)
         {
-            Button button = sender as Button;
-            var item = button.DataContext as GameBananaRecord;
-            if (--imageCounter == -1)
-                imageCounter = imageCount - 1;
-            var image = new BitmapImage(new Uri($"{item.Media[imageCounter].Base}/{item.Media[imageCounter].File}"));
-            Screenshot.Source = image;
-            CaptionText.Text = item.Media[imageCounter].Caption;
-            BigScreenshot.Source = image;
-            BigCaptionText.Text = item.Media[imageCounter].Caption;
-            if (!String.IsNullOrEmpty(CaptionText.Text))
+            if (GalleryItems == null || GalleryItems.Count == 0) return;
+            if (newIndex < 0) newIndex = GalleryItems.Count - 1;
+            if (newIndex >= GalleryItems.Count) newIndex = 0;
+            imageCounter = newIndex;
+
+            for (int i = 0; i < GalleryItems.Count; i++)
             {
-                BigCaptionText.Visibility = Visibility.Visible;
-                CaptionText.Visibility = Visibility.Visible;
+                GalleryItems[i].IsSelected = (i == newIndex);
+            }
+
+            var selectedItem = GalleryItems[newIndex];
+            CaptionText.Text = selectedItem.Caption;
+            CaptionText.Visibility = string.IsNullOrEmpty(selectedItem.Caption) ? Visibility.Collapsed : Visibility.Visible;
+
+            try
+            {
+                var image = new BitmapImage(new Uri(selectedItem.ImageUrl));
+                Screenshot.Source = image;
+                BigScreenshot.Source = image;
+                BigImageTitle.Text = selectedItem.Title ?? $"Image {newIndex + 1} of {GalleryItems.Count}";
+                BigCaptionText.Text = selectedItem.Caption;
+                BigCaptionText.Visibility = string.IsNullOrEmpty(selectedItem.Caption) ? Visibility.Collapsed : Visibility.Visible;
+            }
+            catch { }
+
+            if (GalleryItems.Count <= 1)
+            {
+                ImageLeft.IsEnabled = false;
+                ImageRight.IsEnabled = false;
+                BigImageLeft.IsEnabled = false;
+                BigImageRight.IsEnabled = false;
             }
             else
             {
-                BigCaptionText.Visibility = Visibility.Collapsed;
-                CaptionText.Visibility = Visibility.Collapsed;
+                ImageLeft.IsEnabled = true;
+                ImageRight.IsEnabled = true;
+                BigImageLeft.IsEnabled = true;
+                BigImageRight.IsEnabled = true;
+            }
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    if (GalleryScroll != null && GalleryItemsControl != null)
+                    {
+                        double viewport = GalleryScroll.ActualWidth;
+                        if (viewport <= 0) viewport = GalleryScroll.ViewportWidth;
+                        if (viewport <= 0 && ImagePanel != null) viewport = ImagePanel.ActualWidth;
+                        if (viewport <= 0) viewport = 800;
+
+                        double sidePad = Math.Max(0, (viewport - 302.0) / 2.0);
+                        GalleryItemsControl.Margin = new Thickness(sidePad, 0, sidePad, 0);
+
+                        double targetOffset = newIndex * 222.0;
+                        GalleryScroll.ScrollToHorizontalOffset(targetOffset);
+                    }
+                }
+                catch { }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void GalleryItem_Click(object sender, MouseButtonEventArgs e)
+        {
+            var item = (sender as FrameworkElement)?.DataContext as CoverFlowItem;
+            if (item != null)
+            {
+                UpdateGallerySelection(item.Index);
+                MediaPanel.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ImageLeft_Click(object sender, RoutedEventArgs e)
+        {
+            if (GalleryItems != null && GalleryItems.Count > 0)
+            {
+                UpdateGallerySelection(imageCounter - 1);
             }
         }
 
         private void ImageRight_Click(object sender, RoutedEventArgs e)
         {
-            Button button = sender as Button;
-            var item = button.DataContext as GameBananaRecord;
-            if (++imageCounter == imageCount)
-                imageCounter = 0;
-            var image = new BitmapImage(new Uri($"{item.Media[imageCounter].Base}/{item.Media[imageCounter].File}"));
-            Screenshot.Source = image;
-            CaptionText.Text = item.Media[imageCounter].Caption;
-            BigScreenshot.Source = image;
-            BigCaptionText.Text = item.Media[imageCounter].Caption;
-            if (!String.IsNullOrEmpty(CaptionText.Text))
+            if (GalleryItems != null && GalleryItems.Count > 0)
             {
-                BigCaptionText.Visibility = Visibility.Visible;
-                CaptionText.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                BigCaptionText.Visibility = Visibility.Collapsed;
-                CaptionText.Visibility = Visibility.Collapsed;
+                UpdateGallerySelection(imageCounter + 1);
             }
         }
         private static bool selected = false;
@@ -1438,8 +2662,8 @@ namespace Unverum
             using (var httpClient = new HttpClient())
             {
                 ErrorPanel.Visibility = Visibility.Collapsed;
-                // Initialize categories and games
-                var gameIDS = new string[] { "6246", "21179", "11605", "8897", "19552", "11534", "7019", "9219", "12028", "13821", "14246", "14247", "14768", "15769", "16693" };
+                // Initialize categories for Guilty Gear -Strive- (11534) exclusively
+                var gameIDS = new string[] { "11534" };
                 var types = new string[] { "Mod", "Wip", "Sound" };
                 var gameCounter = 0;
                 foreach (var gameID in gameIDS)
@@ -1504,10 +2728,10 @@ namespace Unverum
                             BrowserMessage.Text = "Uh oh! Something went wrong while deserializing the categories...";
                             return;
                         }
-                        if (!cats.ContainsKey((GameFilter)gameCounter))
-                            cats.Add((GameFilter)gameCounter, new Dictionary<TypeFilter, List<GameBananaCategory>>());
-                        if (!cats[(GameFilter)gameCounter].ContainsKey((TypeFilter)counter))
-                            cats[(GameFilter)gameCounter].Add((TypeFilter)counter, response);
+                        if (!cats.ContainsKey(0))
+                            cats.Add(0, new Dictionary<TypeFilter, List<GameBananaCategory>>());
+                        if (!cats[0].ContainsKey((TypeFilter)counter))
+                            cats[0].Add((TypeFilter)counter, response);
 
                         // Make more requests if needed
                         if (totalPages > 1)
@@ -1553,7 +2777,7 @@ namespace Unverum
                                 {
                                     response = JsonSerializer.Deserialize<List<GameBananaCategory>>(responseString);
                                 }
-                                catch (Exception ex)
+                                catch (Exception)
                                 {
                                     LoadingBar.Visibility = Visibility.Collapsed;
                                     ErrorPanel.Visibility = Visibility.Visible;
@@ -1561,7 +2785,7 @@ namespace Unverum
                                     BrowserMessage.Text = "Uh oh! Something went wrong while deserializing the categories...";
                                     return;
                                 }
-                                cats[(GameFilter)gameCounter][(TypeFilter)counter] = cats[(GameFilter)gameCounter][(TypeFilter)counter].Concat(response).ToList();
+                                cats[0][(TypeFilter)counter] = cats[0][(TypeFilter)counter].Concat(response).ToList();
                             }
                         }
                         counter++;
@@ -1572,12 +2796,13 @@ namespace Unverum
             filterSelect = true;
             GameFilterBox.SelectedIndex = GameBox.SelectedIndex;
             FilterBox.ItemsSource = FilterBoxList;
-            CatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
+            CatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
             SubCatBox.ItemsSource = None;
             CatBox.SelectedIndex = 0;
             SubCatBox.SelectedIndex = 0;
             FilterBox.SelectedIndex = 1;
             filterSelect = false;
+            InitBrowseSectionBar();
             RefreshFilter();
             selected = true;
         }
@@ -1603,6 +2828,11 @@ namespace Unverum
                     SZFilters.Visibility = Visibility.Visible;
                 else
                     SZFilters.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                UpdateBrowseSectionCounts();
+                UpdateBrowseCategoryPillCounts();
             }
         }
         bool managerSelected = true;
@@ -1664,11 +2894,20 @@ namespace Unverum
             LoadingBar.Visibility = Visibility.Visible;
             FeedBox.Visibility = Visibility.Collapsed;
             PageLeft.IsEnabled = false;
-            PageRight.IsEnabled = false;
             var search = searched ? SearchBar.Text : null;
-            await FeedGenerator.GetFeed(page, (GameFilter)GameFilterBox.SelectedIndex, (TypeFilter)TypeBox.SelectedIndex, (FeedFilter)FilterBox.SelectedIndex, (GameBananaCategory)CatBox.SelectedItem,
+            await FeedGenerator.GetFeed(page, 0, (TypeFilter)TypeBox.SelectedIndex, (FeedFilter)FilterBox.SelectedIndex, (GameBananaCategory)CatBox.SelectedItem,
                 (GameBananaCategory)SubCatBox.SelectedItem, (PerPageBox.SelectedIndex + 1) * 10, (bool)NSFWCheckbox.IsChecked, search, (bool)ZsJsonCheckbox.IsChecked, (bool)ColorZCheckbox.IsChecked);
-            FeedBox.ItemsSource = FeedGenerator.CurrentFeed.Records;
+            if (FeedGenerator.CurrentFeed?.Records != null)
+            {
+                if (NSFWCheckbox.IsChecked != true)
+                    FeedBox.ItemsSource = new ObservableCollection<GameBananaRecord>(FeedGenerator.CurrentFeed.Records.Where(r => !r.IsNsfw));
+                else
+                    FeedBox.ItemsSource = FeedGenerator.CurrentFeed.Records;
+            }
+            else
+            {
+                FeedBox.ItemsSource = null;
+            }
             if (FeedGenerator.error)
             {
                 LoadingBar.Visibility = Visibility.Collapsed;
@@ -1676,7 +2915,7 @@ namespace Unverum
                 BrowserRefreshButton.Visibility = Visibility.Visible;
                 if (FeedGenerator.exception.Message.Contains("JSON tokens"))
                 {
-                    BrowserMessage.Text = "Uh oh! Unverum failed to deserialize the GameBanana feed.";
+                    BrowserMessage.Text = "Uh oh! Striverum failed to deserialize the GameBanana feed.";
                     return;
                 }
                 switch (Regex.Match(FeedGenerator.exception.Message, @"\d+").Value)
@@ -1709,7 +2948,7 @@ namespace Unverum
                 ErrorPanel.Visibility = Visibility.Visible;
                 BrowserRefreshButton.Visibility = Visibility.Collapsed;
                 BrowserMessage.Visibility = Visibility.Visible;
-                BrowserMessage.Text = "Unverum couldn't find any mods.";
+                BrowserMessage.Text = "Striverum couldn't find any mods.";
             }
             PageBox.ItemsSource = Enumerable.Range(1, (int)(FeedGenerator.CurrentFeed.TotalPages));
 
@@ -1776,14 +3015,14 @@ namespace Unverum
                     FilterBox.SelectedIndex = 1;
                 }
                 // Set categories
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
-                    CatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
+                    CatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
                 else
                     CatBox.ItemsSource = None;
                 CatBox.SelectedIndex = 0;
                 var cat = (GameBananaCategory)CatBox.SelectedValue;
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
-                    SubCatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
+                    SubCatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
                 else
                     SubCatBox.ItemsSource = None;
                 SubCatBox.SelectedIndex = 0;
@@ -1805,14 +3044,14 @@ namespace Unverum
                     FilterBox.SelectedIndex = 1;
                 }
                 // Set categories
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
-                    CatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
+                    CatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
                 else
                     CatBox.ItemsSource = None;
                 CatBox.SelectedIndex = 0;
                 var cat = (GameBananaCategory)CatBox.SelectedValue;
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
-                    SubCatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
+                    SubCatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
                 else
                     SubCatBox.ItemsSource = None;
                 SubCatBox.SelectedIndex = 0;
@@ -1835,8 +3074,8 @@ namespace Unverum
                 }
                 // Set Categories
                 var cat = (GameBananaCategory)CatBox.SelectedValue;
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
-                    SubCatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
+                    SubCatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
                 else
                     SubCatBox.ItemsSource = None;
                 SubCatBox.SelectedIndex = 0;
@@ -1855,6 +3094,442 @@ namespace Unverum
                 RefreshFilter();
             }
         }
+
+        private void InitBrowseSectionBar()
+        {
+            if (BrowseSections.Count > 0)
+            {
+                UpdateBrowseSectionCounts();
+                return;
+            }
+            BrowseSections.Add(new BrowseSectionItem { Name = "All", FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_LayerGroup, IsSelected = true });
+            BrowseSections.Add(new BrowseSectionItem { Name = "Skins", IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/60ce8d5f438ee.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_UserAlt });
+            BrowseSections.Add(new BrowseSectionItem { Name = "Sounds", IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/sounds.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_VolumeUp });
+            BrowseSections.Add(new BrowseSectionItem { Name = "WiPs", IconPath = GetCategoryIconPath("pack://application:,,,/Assets/Icons/wips.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Wrench });
+            BrowseSections.Add(new BrowseSectionItem { Name = "Other/Misc", IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/62829c5f9e5f8.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_QuestionCircle });
+            BrowseSections.Add(new BrowseSectionItem { Name = "GUIs", IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/6101d57ac2be9.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Palette });
+            BrowseSections.Add(new BrowseSectionItem { Name = "Gameplay", IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/616169f346a22.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Cog });
+            BrowseSections.Add(new BrowseSectionItem { Name = "Stages", IconPath = GetCategoryIconPath("https://images.gamebanana.com/img/ico/ModCategory/6168e12ead8c9.png"), FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Tree });
+            UpdateBrowseSectionCounts();
+        }
+
+        private static Dictionary<string, int> _gbCategoryCounts = new();
+
+        private static void LoadGbCategoryCounts()
+        {
+            if (_gbCategoryCounts != null && _gbCategoryCounts.Count > 0) return;
+            string[] possiblePaths = new[]
+            {
+                $@"{Global.assemblyLocation}{Global.s}Cache{Global.s}GbCategoryCounts_GGS.json",
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "GbCategoryCounts_GGS.json"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Cache", "GbCategoryCounts_GGS.json"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Cache", "GbCategoryCounts_GGS.json")
+            };
+
+            foreach (var p in possiblePaths)
+            {
+                try
+                {
+                    if (File.Exists(p))
+                    {
+                        string json = File.ReadAllText(p);
+                        var dict = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+                        if (dict != null && dict.Count > 0)
+                        {
+                            _gbCategoryCounts = dict;
+                            return;
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private static int GetGbCountForSection(string sectionName)
+        {
+            if (string.IsNullOrEmpty(sectionName)) return 0;
+            LoadGbCategoryCounts();
+            if (_gbCategoryCounts.TryGetValue($"Section_{sectionName}", out int count))
+                return count;
+            if (_gbCategoryCounts.TryGetValue(sectionName, out count))
+                return count;
+            return 0;
+        }
+
+        private static int GetGbCountForCategory(string catName, int? catId = null)
+        {
+            LoadGbCategoryCounts();
+            if (catId.HasValue && _gbCategoryCounts.TryGetValue($"ID_{catId.Value}", out int idCount))
+                return idCount;
+            if (!string.IsNullOrEmpty(catName))
+            {
+                if (_gbCategoryCounts.TryGetValue($"Mod_{catName}", out int modCount))
+                    return modCount;
+                if (_gbCategoryCounts.TryGetValue(catName, out int count))
+                    return count;
+                var match = _gbCategoryCounts.FirstOrDefault(kvp => CategoryMatches(kvp.Key, catName) || CategoryMatches(kvp.Key, $"Mod_{catName}"));
+                if (match.Value > 0) return match.Value;
+            }
+            return 0;
+        }
+
+        public void UpdateBrowseSectionCounts()
+        {
+            if (BrowseSections == null) return;
+            LoadGbCategoryCounts();
+
+            foreach (var bSec in BrowseSections)
+            {
+                bSec.ModCount = GetGbCountForSection(bSec.Name);
+            }
+        }
+
+        public void UpdateBrowseCategoryPillCounts()
+        {
+            if (BrowseCategoryPills == null || BrowseCategoryPills.Count == 0) return;
+            LoadGbCategoryCounts();
+
+            foreach (var pill in BrowseCategoryPills)
+            {
+                pill.ModCount = GetGbCountForCategory(pill.Name, pill.GbCategory?.ID);
+            }
+        }
+
+        private int GetModCountForName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return 0;
+
+            var matchingSecCat = _sections?.SelectMany(s => s.Categories)?.FirstOrDefault(c => CategoryMatches(c.Name, name));
+            var matchingSubCat = _sections?.SelectMany(s => s.Categories)?.SelectMany(c => c.Subcategories)?.FirstOrDefault(sub => CategoryMatches(sub.Name, name));
+
+            if (matchingSubCat != null) return matchingSubCat.ModCount;
+            if (matchingSecCat != null) return matchingSecCat.ModCount;
+
+            if (Global.ModList != null)
+            {
+                return Global.ModList.Count(m =>
+                    (!string.IsNullOrEmpty(m.subcategory) && CategoryMatches(m.subcategory, name)) ||
+                    (m.tags != null && m.tags.Any(t => CategoryMatches(t, name)))
+                );
+            }
+
+            return 0;
+        }
+
+        private void AnimateBrowseToCategories(string sectionName, string iconPath, FontAwesome5.EFontAwesomeIcon faIcon, int modCount)
+        {
+            BrowseCurrentSectionTitle.Text = sectionName;
+            BrowseCurrentSectionCount.Text = modCount.ToString();
+            if (!string.IsNullOrEmpty(iconPath))
+            {
+                try
+                {
+                    BrowseCurrentSectionImage.Source = new BitmapImage(new Uri(iconPath, UriKind.RelativeOrAbsolute));
+                    BrowseCurrentSectionImage.Visibility = Visibility.Visible;
+                    BrowseCurrentSectionIcon.Visibility = Visibility.Collapsed;
+                }
+                catch
+                {
+                    BrowseCurrentSectionIcon.Icon = faIcon;
+                    BrowseCurrentSectionIcon.Visibility = Visibility.Visible;
+                    BrowseCurrentSectionImage.Visibility = Visibility.Collapsed;
+                }
+            }
+            else
+            {
+                BrowseCurrentSectionIcon.Icon = faIcon;
+                BrowseCurrentSectionIcon.Visibility = Visibility.Visible;
+                BrowseCurrentSectionImage.Visibility = Visibility.Collapsed;
+            }
+
+            BrowseCategoryPanel.Visibility = Visibility.Visible;
+            var duration = TimeSpan.FromMilliseconds(200);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var secOpacity = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            var secTranslate = new DoubleAnimation(0, -30, duration) { EasingFunction = ease };
+            secOpacity.Completed += (s, e) => BrowseSectionPanel.Visibility = Visibility.Collapsed;
+            BrowseSectionPanel.BeginAnimation(UIElement.OpacityProperty, secOpacity);
+            BrowseSectionTranslate.BeginAnimation(TranslateTransform.XProperty, secTranslate);
+
+            BrowseCategoryPanel.Opacity = 0;
+            BrowseCategoryTranslate.X = 30;
+            var catOpacity = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            var catTranslate = new DoubleAnimation(30, 0, duration) { EasingFunction = ease };
+            BrowseCategoryPanel.BeginAnimation(UIElement.OpacityProperty, catOpacity);
+            BrowseCategoryTranslate.BeginAnimation(TranslateTransform.XProperty, catTranslate);
+
+            BrowseFilterScroll?.ScrollToHorizontalOffset(0);
+        }
+
+        private void AnimateBrowseToSections()
+        {
+            BrowseSectionPanel.Visibility = Visibility.Visible;
+            var duration = TimeSpan.FromMilliseconds(200);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var catOpacity = new DoubleAnimation(1, 0, duration) { EasingFunction = ease };
+            var catTranslate = new DoubleAnimation(0, 30, duration) { EasingFunction = ease };
+            catOpacity.Completed += (s, e) => BrowseCategoryPanel.Visibility = Visibility.Collapsed;
+            BrowseCategoryPanel.BeginAnimation(UIElement.OpacityProperty, catOpacity);
+            BrowseCategoryTranslate.BeginAnimation(TranslateTransform.XProperty, catTranslate);
+
+            BrowseSectionPanel.Opacity = 0;
+            BrowseSectionTranslate.X = -30;
+            var secOpacity = new DoubleAnimation(0, 1, duration) { EasingFunction = ease };
+            var secTranslate = new DoubleAnimation(-30, 0, duration) { EasingFunction = ease };
+            BrowseSectionPanel.BeginAnimation(UIElement.OpacityProperty, secOpacity);
+            BrowseSectionTranslate.BeginAnimation(TranslateTransform.XProperty, secTranslate);
+
+            BrowseFilterScroll?.ScrollToHorizontalOffset(0);
+        }
+
+        private void BrowseBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var p in BrowseCategoryPills) p.IsSelected = false;
+            filterSelect = true;
+            if (TypeBox.SelectedIndex == 2 || TypeBox.SelectedIndex == 1) // Sounds or WiPs
+            {
+                CatBox.SelectedIndex = 0;
+            }
+            else
+            {
+                SubCatBox.SelectedIndex = 0;
+            }
+            filterSelect = false;
+            page = 1;
+            RefreshFilter();
+            AnimateBrowseToSections();
+        }
+
+        private void BrowseSectionBadge_Click(object sender, MouseButtonEventArgs e)
+        {
+            foreach (var p in BrowseCategoryPills) p.IsSelected = false;
+            filterSelect = true;
+            if (TypeBox.SelectedIndex == 2 || TypeBox.SelectedIndex == 1) // Sounds or WiPs
+            {
+                CatBox.SelectedIndex = 0;
+            }
+            else
+            {
+                SubCatBox.SelectedIndex = 0;
+            }
+            filterSelect = false;
+            page = 1;
+            RefreshFilter();
+        }
+
+        private void BrowseSectionButton_Click(object sender, MouseButtonEventArgs e)
+        {
+            var item = (sender as FrameworkElement)?.DataContext as BrowseSectionItem;
+            if (item == null) return;
+
+            foreach (var s in BrowseSections) s.IsSelected = (s == item);
+            SelectBrowseSection(item.Name);
+
+            if (BrowseCategoryPills.Count > 0)
+            {
+                AnimateBrowseToCategories(item.Name, item.IconPath, item.FaIcon, item.ModCount);
+            }
+            else
+            {
+                AnimateBrowseToSections();
+            }
+        }
+
+        private void SelectBrowseSection(string sectionName)
+        {
+            if (!selected || cats == null || !cats.ContainsKey(0))
+            {
+                InitializeBrowser();
+                return;
+            }
+
+            SearchBar.Clear();
+            searched = false;
+            filterSelect = true;
+
+            BrowseCategoryPills.Clear();
+
+            if (sectionName == "All")
+            {
+                TypeBox.SelectedIndex = 0; // Mods
+                if (cats[0].ContainsKey(TypeFilter.Mods) && cats[0][TypeFilter.Mods].Any(x => x.RootID == 0))
+                    CatBox.ItemsSource = All.Concat(cats[0][TypeFilter.Mods].Where(x => x.RootID == 0).OrderBy(y => y.ID));
+                else
+                    CatBox.ItemsSource = None;
+                CatBox.SelectedIndex = 0;
+                SubCatBox.ItemsSource = None;
+                SubCatBox.SelectedIndex = 0;
+                AnimateBrowseToSections();
+            }
+            else if (sectionName == "Sounds")
+            {
+                TypeBox.SelectedIndex = 2; // Sounds
+                if (cats[0].ContainsKey(TypeFilter.Sounds))
+                {
+                    var soundList = cats[0][TypeFilter.Sounds].Where(x => x.RootID == 0).OrderBy(y => y.ID).ToList();
+                    CatBox.ItemsSource = All.Concat(soundList);
+                    CatBox.SelectedIndex = 0;
+                    SubCatBox.ItemsSource = None;
+                    SubCatBox.SelectedIndex = 0;
+
+                    foreach (var sc in soundList)
+                    {
+                        var matchingSecCat = _sections.SelectMany(s => s.Categories).FirstOrDefault(c => CategoryMatches(c.Name, sc.Name));
+                        string icon = matchingSecCat?.IconPath ?? GetCategoryIconPath(sc.Icon?.OriginalString);
+                        BrowseCategoryPills.Add(new BrowseCategoryItem
+                        {
+                            Name = sc.Name,
+                            IconPath = icon,
+                            FaIcon = string.IsNullOrEmpty(icon) ? FontAwesome5.EFontAwesomeIcon.Solid_Cog : FontAwesome5.EFontAwesomeIcon.Solid_Tag,
+                            GbCategory = sc,
+                            ModCount = GetGbCountForCategory(sc.Name, sc.ID),
+                            IsSelected = false
+                        });
+                    }
+                }
+            }
+            else if (sectionName == "WiPs")
+            {
+                TypeBox.SelectedIndex = 1; // WiPs
+                if (cats[0].ContainsKey(TypeFilter.WiPs))
+                {
+                    var wipList = cats[0][TypeFilter.WiPs].Where(x => x.RootID == 0).OrderBy(y => y.ID).ToList();
+                    CatBox.ItemsSource = All.Concat(wipList);
+                    CatBox.SelectedIndex = 0;
+                    SubCatBox.ItemsSource = None;
+                    SubCatBox.SelectedIndex = 0;
+
+                    foreach (var wc in wipList)
+                    {
+                        var matchingSecCat = _sections.SelectMany(s => s.Categories).FirstOrDefault(c => CategoryMatches(c.Name, wc.Name));
+                        string icon = matchingSecCat?.IconPath ?? GetCategoryIconPath(wc.Icon?.OriginalString);
+                        BrowseCategoryPills.Add(new BrowseCategoryItem
+                        {
+                            Name = wc.Name,
+                            IconPath = icon,
+                            FaIcon = string.IsNullOrEmpty(icon) ? FontAwesome5.EFontAwesomeIcon.Solid_Wrench : FontAwesome5.EFontAwesomeIcon.Solid_Tag,
+                            GbCategory = wc,
+                            ModCount = GetGbCountForCategory(wc.Name, wc.ID),
+                            IsSelected = false
+                        });
+                    }
+                }
+            }
+            else
+            {
+                // Mods sections: Skins, Other/Misc, GUIs, Gameplay, Stages
+                TypeBox.SelectedIndex = 0; // Mods
+                if (cats[0].ContainsKey(TypeFilter.Mods))
+                {
+                    var modList = cats[0][TypeFilter.Mods].Where(x => x.RootID == 0).OrderBy(y => y.ID).ToList();
+                    CatBox.ItemsSource = All.Concat(modList);
+
+                    var matchedCat = modList.FirstOrDefault(c => CategoryMatches(c.Name, sectionName));
+                    if (matchedCat != null)
+                    {
+                        CatBox.SelectedItem = matchedCat;
+
+                        // Check for subcategories (e.g. Skins -> characters)
+                        var subCats = cats[0][TypeFilter.Mods].Where(x => x.RootID == matchedCat.ID).OrderBy(y => y.ID).ToList();
+                        if (subCats.Count > 0)
+                        {
+                            SubCatBox.ItemsSource = All.Concat(subCats);
+                            SubCatBox.SelectedIndex = 0;
+
+                            foreach (var sc in subCats)
+                            {
+                                var matchingSecCat = _sections.SelectMany(s => s.Categories).FirstOrDefault(c => CategoryMatches(c.Name, sc.Name));
+                                string icon = matchingSecCat?.IconPath ?? GetCategoryIconPath(sc.Icon?.OriginalString);
+                                BrowseCategoryPills.Add(new BrowseCategoryItem
+                                {
+                                    Name = sc.Name,
+                                    IconPath = icon,
+                                    FaIcon = string.IsNullOrEmpty(icon) ? FontAwesome5.EFontAwesomeIcon.Solid_User : FontAwesome5.EFontAwesomeIcon.Solid_Tag,
+                                    GbCategory = sc,
+                                    ModCount = GetGbCountForCategory(sc.Name, sc.ID),
+                                    IsSelected = false
+                                });
+                            }
+                        }
+                        else
+                        {
+                            SubCatBox.ItemsSource = None;
+                            SubCatBox.SelectedIndex = 0;
+                        }
+                    }
+                    else
+                    {
+                        CatBox.SelectedIndex = 0;
+                        SubCatBox.ItemsSource = None;
+                        SubCatBox.SelectedIndex = 0;
+                    }
+                }
+            }
+
+            filterSelect = false;
+            page = 1;
+            RefreshFilter();
+        }
+
+        private void BrowseCategoryPill_Click(object sender, MouseButtonEventArgs e)
+        {
+            var pill = (sender as FrameworkElement)?.DataContext as BrowseCategoryItem;
+            if (pill == null) return;
+
+            if (pill.IsSelected)
+            {
+                // Toggle off
+                pill.IsSelected = false;
+                filterSelect = true;
+                if (TypeBox.SelectedIndex == 2 || TypeBox.SelectedIndex == 1) // Sounds or WiPs
+                {
+                    CatBox.SelectedIndex = 0; // All
+                }
+                else
+                {
+                    SubCatBox.SelectedIndex = 0; // All
+                }
+                filterSelect = false;
+                page = 1;
+                RefreshFilter();
+                return;
+            }
+
+            foreach (var p in BrowseCategoryPills)
+            {
+                p.IsSelected = (p == pill);
+            }
+
+            filterSelect = true;
+            if (TypeBox.SelectedIndex == 2 || TypeBox.SelectedIndex == 1) // Sounds or WiPs
+            {
+                foreach (var item in CatBox.Items)
+                {
+                    if (item is GameBananaCategory gbCat && (gbCat.ID == pill.GbCategory?.ID || CategoryMatches(gbCat.Name, pill.Name)))
+                    {
+                        CatBox.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var item in SubCatBox.Items)
+                {
+                    if (item is GameBananaCategory gbCat && (gbCat.ID == pill.GbCategory?.ID || CategoryMatches(gbCat.Name, pill.Name)))
+                    {
+                        SubCatBox.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+            filterSelect = false;
+            page = 1;
+            RefreshFilter();
+        }
+
         private void UniformGrid_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             var grid = sender as UniformGrid;
@@ -1939,13 +3614,15 @@ namespace Unverum
                     {
                         OptionText = "Launch through Executable",
                         OptionSubText = "Launches the executable directly",
-                        Index = 0
+                        Index = 0,
+                        FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Play
                     });
                     choices.Add(new Choice()
                     {
                         OptionText = $"Launch through {store}",
                         OptionSubText = $"Uses the {store} shortcut to launch",
-                        Index = 1
+                        Index = 1,
+                        FaIcon = store == "Steam" ? FontAwesome5.EFontAwesomeIcon.Brands_Steam : FontAwesome5.EFontAwesomeIcon.Solid_Gamepad
                     });
                 }
                 if (Global.config.CurrentGame.Equals("The King of Fighters XV", StringComparison.InvariantCultureIgnoreCase)
@@ -2030,31 +3707,36 @@ namespace Unverum
             {
                 OptionText = "Add New Loadout - Enabled",
                 OptionSubText = "Adds a new loadout starting with all mods enabled in alphanumeric order",
-                Index = 0
+                Index = 0,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_PlusCircle
             });
             choices.Add(new Choice()
             {
                 OptionText = "Add New Loadout - Disabled",
-                OptionSubText = "Adds a new loadout starting with all mods diabled in alphanumeric order",
-                Index = 1
+                OptionSubText = "Adds a new loadout starting with all mods disabled in alphanumeric order",
+                Index = 1,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_MinusCircle
             });
             choices.Add(new Choice()
             {
                 OptionText = "Copy Loadout",
                 OptionSubText = "Creates a copy of current loadout",
-                Index = 2
+                Index = 2,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Copy
             });
             choices.Add(new Choice()
             {
                 OptionText = $"Rename Current Loadout",
                 OptionSubText = $"Changes the name of the current loadout",
-                Index = 3
+                Index = 3,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_Edit
             });
             choices.Add(new Choice()
             {
                 OptionText = $"Delete Current Loadout",
                 OptionSubText = $"Deletes current loadout and switches to first available one",
-                Index = 4
+                Index = 4,
+                FaIcon = FontAwesome5.EFontAwesomeIcon.Solid_TrashAlt
             });
             Dispatcher.Invoke(() =>
             {
@@ -2241,13 +3923,13 @@ namespace Unverum
                 LauncherOptionsBox.SelectedIndex = Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex;
 
                 DescriptionWindow.Document = defaultFlow;
-                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Unverum;component/Assets/unverumpreview.png"));
+                var bitmap = new BitmapImage(new Uri("pack://application:,,,/Striverum;component/Assets/Striverumpreview.png"));
                 Preview.Source = bitmap;
                 PreviewBG.Source = null;
 
                 Global.logger.WriteLine("Checking for updates...", LoggerType.Info);
                 GameBox.IsEnabled = false;
-                ModGrid.IsEnabled = false;
+                ModListView.IsEnabled = false;
                 ConfigButton.IsEnabled = false;
                 LaunchButton.IsEnabled = false;
                 OpenModsButton.IsEnabled = false;
@@ -2272,14 +3954,14 @@ namespace Unverum
                 FilterBox.SelectedIndex = 3;
                 NSFWCheckbox.IsChecked = true;
                 // Set categories
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
-                    CatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
+                    CatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
                 else
                     CatBox.ItemsSource = None;
                 CatBox.SelectedIndex = 0;
                 var cat = (GameBananaCategory)CatBox.SelectedValue;
-                if (cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
-                    SubCatBox.ItemsSource = All.Concat(cats[(GameFilter)GameFilterBox.SelectedIndex][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
+                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
+                    SubCatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
                 else
                     SubCatBox.ItemsSource = None;
                 SubCatBox.SelectedIndex = 0;
@@ -2302,108 +3984,82 @@ namespace Unverum
             Search();
         }
 
-        private void ModGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+                private void ModListView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Space && ModGrid.CurrentColumn.Header.ToString() != "Enabled")
-                foreach (var item in ModGrid.SelectedItems)
+            if (e.Key == Key.Space)
+                foreach (var item in ModListView.SelectedItems)
                 {
-                    var checkbox = ModGrid.Columns[0].GetCellContent(item) as CheckBox;
-                    if (checkbox != null)
-                        checkbox.IsChecked = !checkbox.IsChecked;
+                    if (item is Mod mod)
+                    {
+                        mod.enabled = !mod.enabled;
+                    }
                 }
         }
+
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (IsLoaded && managerSelected && ModGridSearchButton.IsEnabled)
-                if (e.KeyboardDevice.IsKeyDown(Key.LeftCtrl) || e.KeyboardDevice.IsKeyDown(Key.RightCtrl))
-                {
-                    switch (e.Key)
-                    {
-                        case Key.F:
-                            ModGrid_SearchBar.Focus();
-                            break;
-                    }
-                }
-        }
-
-        private void ModGrid_SearchBar_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyboardDevice.IsKeyDown(Key.Enter))
-                ModGridSearch();
-        }
-        private void ModGridSearch()
-        {
-            if (!String.IsNullOrEmpty(ModGrid_SearchBar.Text) && ModGridSearchButton.IsEnabled)
+            if (e.Key == Key.Escape)
             {
-                object focusedItem = null;
-                ModGrid.SelectedItems.Clear();
-                string text = ModGrid_SearchBar.Text;
-                for (int i = 0; i < ModGrid.Items.Count; i++)
+                if (MediaPanel != null && MediaPanel.Visibility == Visibility.Visible)
                 {
-                    object item = ModGrid.Items[i];
-                    ModGrid.ScrollIntoView(item);
-                    DataGridRow row = (DataGridRow)ModGrid.ItemContainerGenerator.ContainerFromIndex(i);
-                    TextBlock cellContent = ModGrid.Columns[1].GetCellContent(row) as TextBlock;
-                    if (cellContent != null && cellContent.Text.Contains(text, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        ModGrid.SelectedItems.Add(item);
-                        if (ModGrid.SelectedItems.Count == 1)
-                            focusedItem = item;
-                    }
+                    MediaPanel.Visibility = Visibility.Collapsed;
+                    e.Handled = true;
+                    return;
                 }
-                if (focusedItem != null)
-                    ModGrid.ScrollIntoView(focusedItem);
-                else
+                if (DescPanel != null && DescPanel.Visibility == Visibility.Visible)
                 {
-                    ShowMetadata(null);
-                    Global.logger.WriteLine($"No mods found matching {text}", LoggerType.Info);
+                    DescPanel.Visibility = Visibility.Collapsed;
+                    e.Handled = true;
+                    return;
                 }
             }
         }
 
-        private void ModGridSearchButton_Click(object sender, RoutedEventArgs e)
+        private void ModListViewSearch()
         {
-            ModGridSearch();
+            RefreshModList();
         }
 
-        private void Clear_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            ModGrid_SearchBar.Clear();
-        }
         private async void SortAlphabeticallyAndGroupEnabled_Click(object sender, RoutedEventArgs e)
         {
-            DataGridColumnHeader colHeader = sender as DataGridColumnHeader;
-            if (colHeader != null)
+            Button btn = sender as Button;
+            if (btn != null)
             {
-                if (colHeader.Column.Header.Equals("Name"))
+                if (btn.Name == "SortAlphabetically")
                 {
-                    var choice = MessageBox.Show($"Confirm sorting all mods alphanumerically?", "Unverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var choice = MessageBox.Show($"Confirm sorting all mods alphanumerically?", "Striverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (choice == MessageBoxResult.No)
                         return;
                     // Sort alphanumerically
                     Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderBy(x => x.name, new NaturalSort()).ToList());
                     Global.logger.WriteLine("Sorted alphanumerically!", LoggerType.Info);
                 }
-                else if (colHeader.Column.Header.Equals("Enabled"))
+                else if (btn.Name == "GroupEnabled")
                 {
-                    var choice = MessageBox.Show($"Confirm moving all enabled mods to the top?", "Unverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var choice = MessageBox.Show($"Confirm moving all enabled mods to the top?", "Striverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (choice == MessageBoxResult.No)
                         return;
                     // Move all enabled mods to top
                     Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderByDescending(x => x.enabled).ToList());
                     Global.logger.WriteLine("Moved all enabled mods to the top!", LoggerType.Info);
                 }
+                else if (btn.Name == "SortCategories")
+                {
+                    Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderBy(x => x.cat).ThenBy(x => x.subcategory).ToList());
+                    Global.logger.WriteLine("Sorted by Categories!", LoggerType.Info);
+                }
                 await Task.Run(() =>
                 {
                     App.Current.Dispatcher.Invoke((Action)delegate
                     {
-                        ModGrid.ItemsSource = Global.ModList;
+                        ModListView.ItemsSource = Global.ModList;
+                        RefreshModList();
                     });
                 });
                 Global.config.Configs[Global.config.CurrentGame].ModList = Global.ModList;
             }
-            e.Handled = true;
+            if (e != null) e.Handled = true;
         }
 
         private void ZsJsonCheckbox_Checked(object sender, RoutedEventArgs e)
@@ -2419,3 +4075,4 @@ namespace Unverum
         }
     }
 }
+

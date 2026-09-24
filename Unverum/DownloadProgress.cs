@@ -1,4 +1,4 @@
-﻿namespace Unverum
+namespace Striverum
 {
     public class DownloadProgress
     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +14,7 @@ using System.Windows.Shapes;
 using System.Threading;
 using System.ComponentModel;
 
-namespace Unverum
+namespace Striverum
 {
     /// <summary>
     /// Interaction logic for ProgressBox.xaml

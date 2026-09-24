@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Striverum runtime and user configuration
+Config.json
+**/Config.json
+Mods/
+**/Mods/
+Downloads/
+**/Downloads/
+.vscode/
+.idea/
