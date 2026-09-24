@@ -1249,9 +1249,25 @@ namespace Striverum
                 Global.games.Add(game);
             }
 
+            if (Global.config.Configs == null)
+            {
+                Global.config.CurrentGame = "Guilty Gear -Strive-";
+                Global.config.Configs = new()
+                {
+                    {
+                        Global.config.CurrentGame, new()
+                        {
+                            CurrentLoadout = "Default",
+                            Loadouts = new() { { "Default", new() } },
+                            FirstOpen = true
+                        }
+                    }
+                };
+            }
+
             if (Global.config.CurrentGame == "Dragon Ball FighterZ" || string.IsNullOrEmpty(Global.config.CurrentGame))
             {
-                if (Global.config.Configs != null && Global.config.Configs.ContainsKey("Dragon Ball FighterZ"))
+                if (Global.config.Configs.ContainsKey("Dragon Ball FighterZ"))
                 {
                     if (!Global.config.Configs.ContainsKey("Guilty Gear -Strive-"))
                     {
@@ -1260,15 +1276,15 @@ namespace Striverum
                     Global.config.Configs.Remove("Dragon Ball FighterZ");
                 }
                 Global.config.CurrentGame = "Guilty Gear -Strive-";
-                Global.UpdateConfig();
             }
 
-            if (Global.config.Configs == null)
+            if (!Global.config.Configs.ContainsKey(Global.config.CurrentGame))
             {
-                Global.config.CurrentGame = "Guilty Gear -Strive-";
-                Global.config.Configs = new()
+                Global.config.Configs[Global.config.CurrentGame] = new()
                 {
-                    { Global.config.CurrentGame, new() }
+                    CurrentLoadout = "Default",
+                    Loadouts = new() { { "Default", new() } },
+                    FirstOpen = true
                 };
             }
 

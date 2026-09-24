@@ -14,7 +14,7 @@ Striverum reimagines mod management with a laser-focus on Guilty Gear -Strive-, 
 
 -**Smart Tagging & Filtering**
   - Instant filtering by character, category, author, and sound types.
-  - Interactive tag bubbles directly on mod cards — click any character or sound tag to instantly isolate matching mods.
+  - Interactive tag bubbles directly on mod cards - click any character or sound tag to instantly isolate matching mods.
 
 - **In-Place Animated Sidebar Navigation**
   - Smooth sliding transitions between primary sections (Skins, Sounds, Stages, UI, etc.) and deep subcategories directly in the sidebar.
@@ -62,7 +62,7 @@ Striverum reimagines mod management with a laser-focus on Guilty Gear -Strive-, 
 1. Check the boxes next to the mods you want active.
 2. Drag and drop mods to adjust priority (top rows take priority over lower rows).
 3. Select your desired launcher option (Steam / Vanilla).
-4. Click **Launch** — Striverum will automatically stage mods, apply paks, and launch the game.
+4. Click **Launch** - Striverum will automatically stage mods, apply paks, and launch the game.
 
 ---
 
@@ -72,7 +72,7 @@ Striverum features built-in self-updating via GitHub Releases. When a new releas
 
 ---
 
-## 📜 License & Credits
+## License & Credits
 
 - **Striverum** is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
 - Based on and forked from **Unverum** originally developed by [TekkaGB](https://github.com/TekkaGB/Unverum).

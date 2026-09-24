@@ -369,5 +369,9 @@ Mods/
 **/Mods/
 Downloads/
 **/Downloads/
+Publish/
+**/publish/
+*.7z
+*.zip
 .vscode/
 .idea/

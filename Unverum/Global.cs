@@ -21,15 +21,47 @@ namespace Striverum
         public static ObservableCollection<Mod> ModList;
         public static void UpdateConfig()
         {
-            config.Configs[config.CurrentGame].Loadouts[config.Configs[config.CurrentGame].CurrentLoadout] = ModList;
-            string configString = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            if (config == null) return;
+            if (string.IsNullOrEmpty(config.CurrentGame))
+                config.CurrentGame = "Guilty Gear -Strive-";
+
+            if (config.Configs == null)
+            {
+                config.Configs = new()
+                {
+                    { config.CurrentGame, new() }
+                };
+            }
+
+            if (!config.Configs.ContainsKey(config.CurrentGame))
+            {
+                config.Configs[config.CurrentGame] = new();
+            }
+
+            var gameConfig = config.Configs[config.CurrentGame];
+            if (gameConfig.Loadouts == null)
+            {
+                gameConfig.Loadouts = new();
+            }
+
+            if (string.IsNullOrEmpty(gameConfig.CurrentLoadout))
+            {
+                gameConfig.CurrentLoadout = "Default";
+            }
+
+            if (ModList != null)
+            {
+                gameConfig.Loadouts[gameConfig.CurrentLoadout] = ModList;
+            }
+
             try
             {
+                string configString = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText($@"{assemblyLocation}{s}Config.json", configString);
             }
             catch (Exception e)
             {
-                logger.WriteLine($"Couldn't write Config.json ({e.Message})", LoggerType.Error);
+                logger?.WriteLine($"Couldn't write Config.json ({e.Message})", LoggerType.Error);
             }
         }
     }
