@@ -18,6 +18,7 @@ namespace Striverum
         public Uri caticon { get; set; }
         public DateTime? lastupdate { get; set; }
         public string cachedIconPath { get; set; }
+        public Uri homepage { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public ObservableCollection<ModTag> TagItems { get; set; } = new ObservableCollection<ModTag>();
     }

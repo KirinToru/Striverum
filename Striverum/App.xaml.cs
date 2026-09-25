@@ -39,6 +39,7 @@ namespace Striverum
         {
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
+            DarkModeHelper.EnableDarkModeForAllWindows();
             DispatcherUnhandledException += App_DispatcherUnhandledException;
             RegistryConfig.InstallGBHandler();
             MainWindow mw = new MainWindow();

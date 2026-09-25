@@ -31,6 +31,7 @@ namespace Striverum
                 main.LaunchButton.IsEnabled = true;
                 main.OpenModsButton.IsEnabled = true;
                 main.UpdateButton.IsEnabled = true;
+                main.ResetTagsButton.IsEnabled = true;
                 main.EditLoadoutsButton.IsEnabled = true;
                 main.LoadoutsBox.IsEnabled = true;
                 main.LauncherOptionsBox.IsEnabled = true;
@@ -100,6 +101,7 @@ namespace Striverum
                 main.LaunchButton.IsEnabled = true;
                 main.OpenModsButton.IsEnabled = true;
                 main.UpdateButton.IsEnabled = true;
+                main.ResetTagsButton.IsEnabled = true;
                 main.EditLoadoutsButton.IsEnabled = true;
                 main.LoadoutsBox.IsEnabled = true;
                 main.LauncherOptionsBox.IsEnabled = true;
@@ -127,6 +129,7 @@ namespace Striverum
                             main.LaunchButton.IsEnabled = true;
                             main.OpenModsButton.IsEnabled = true;
                             main.UpdateButton.IsEnabled = true;
+                            main.ResetTagsButton.IsEnabled = true;
                             main.EditLoadoutsButton.IsEnabled = true;
                             main.LoadoutsBox.IsEnabled = true;
                             main.LauncherOptionsBox.IsEnabled = true;
@@ -164,6 +167,7 @@ namespace Striverum
             main.LaunchButton.IsEnabled = true;
             main.OpenModsButton.IsEnabled = true;
             main.UpdateButton.IsEnabled = true;
+            main.ResetTagsButton.IsEnabled = true;
             main.EditLoadoutsButton.IsEnabled = true;
             main.LoadoutsBox.IsEnabled = true;
             main.LauncherOptionsBox.IsEnabled = true;

@@ -24,6 +24,7 @@ using Microsoft.Win32;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Runtime.CompilerServices;
+using System.Windows.Threading;
 
 namespace Striverum
 {
@@ -1200,6 +1201,7 @@ namespace Striverum
         public MainWindow()
         {
             InitializeComponent();
+            DarkModeHelper.ApplyDarkMode(this);
             Global.logger = new Logger(ConsoleWindow);
             Global.config = new();
 
@@ -1371,6 +1373,8 @@ namespace Striverum
 
             BrowseSectionBar.ItemsSource = BrowseSections;
             BrowseCategoryPillsBar.ItemsSource = BrowseCategoryPills;
+            DownloadQueueManager.Instance.ProgressChanged += OnQueueProgressChanged;
+            DownloadQueueManager.Instance.AllCompleted += OnQueueAllCompleted;
             GalleryItemsControl.ItemsSource = GalleryItems;
             GalleryScroll.SizeChanged += (s, e) =>
             {
@@ -1403,15 +1407,29 @@ namespace Striverum
             LauncherOptionsBox.ItemsSource = LauncherOptions;
             LauncherOptionsBox.SelectedIndex = Global.config.Configs[Global.config.CurrentGame].LauncherOptionIndex;
         }
+        private DispatcherTimer _modsWatcherDebounceTimer;
         private void OnModified(object sender, FileSystemEventArgs e)
         {
             try
             {
-                App.Current.Dispatcher.Invoke((Action)delegate
+                App.Current.Dispatcher.Invoke(() =>
                 {
-                    Refresh();
-                    Global.UpdateConfig();
-                    Activate();
+                    if (_modsWatcherDebounceTimer == null)
+                    {
+                        _modsWatcherDebounceTimer = new DispatcherTimer
+                        {
+                            Interval = TimeSpan.FromMilliseconds(500)
+                        };
+                        _modsWatcherDebounceTimer.Tick += (s, args) =>
+                        {
+                            _modsWatcherDebounceTimer.Stop();
+                            Refresh();
+                            Global.UpdateConfig();
+                        };
+                    }
+
+                    _modsWatcherDebounceTimer.Stop();
+                    _modsWatcherDebounceTimer.Start();
                 });
             }
             catch (Exception ex)
@@ -1419,6 +1437,7 @@ namespace Striverum
                 Global.logger.WriteLine($"OnModified error: {ex.Message}", LoggerType.Error);
             }
         }
+
 
         private async void Refresh()
         {
@@ -1496,6 +1515,7 @@ namespace Striverum
                             mod.cat = meta.cat;
                             mod.subcategory = meta.subcategory;
                             mod.caticon = meta.caticon;
+                            mod.homepage = meta.homepage;
 
                             if (meta.homepage != null && meta.homepage.ToString().Contains("gamebanana.com", StringComparison.OrdinalIgnoreCase))
                             {
@@ -1803,6 +1823,7 @@ namespace Striverum
                 LaunchButton.IsEnabled = false;
                 OpenModsButton.IsEnabled = false;
                 UpdateButton.IsEnabled = false;
+                ResetTagsButton.IsEnabled = false;
                 EditLoadoutsButton.IsEnabled = false;
                 LoadoutsBox.IsEnabled = false;
                 LauncherOptionsBox.IsEnabled = false;
@@ -1832,6 +1853,7 @@ namespace Striverum
                     LaunchButton.IsEnabled = true;
                     OpenModsButton.IsEnabled = true;
                     UpdateButton.IsEnabled = true;
+                    ResetTagsButton.IsEnabled = true;
                     GameBox.IsEnabled = true;
                     EditLoadoutsButton.IsEnabled = true;
                     LoadoutsBox.IsEnabled = true;
@@ -1843,6 +1865,7 @@ namespace Striverum
                 LaunchButton.IsEnabled = true;
                 OpenModsButton.IsEnabled = true;
                 UpdateButton.IsEnabled = true;
+                ResetTagsButton.IsEnabled = true;
                 GameBox.IsEnabled = true;
                 EditLoadoutsButton.IsEnabled = true;
                 LoadoutsBox.IsEnabled = true;
@@ -1973,6 +1996,125 @@ namespace Striverum
                 UpdateModTagActiveStates();
                 RefreshModList();
             }
+        }
+
+        private void ResetAllTags_Click(object sender, RoutedEventArgs e)
+        {
+            if (Global.ModList == null || Global.ModList.Count == 0)
+            {
+                MessageBox.Show("No mods found to reset tags.", "Reset All Tags", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var confirmDialog = new ConfirmResetTagsWindow();
+            confirmDialog.Owner = this;
+            if (confirmDialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                string currentModDirectory = Global.GetCurrentModDirectory();
+                int updatedCount = 0;
+
+                foreach (var mod in Global.ModList)
+                {
+                    if (mod == null) continue;
+
+                    var defaultTags = GetDefaultTagsForMod(mod);
+                    mod.tags = defaultTags;
+
+                    // Persist to mod.json
+                    try
+                    {
+                        string modJsonPath = $@"{currentModDirectory}{Global.s}{mod.name}{Global.s}mod.json";
+                        Metadata meta = null;
+                        if (File.Exists(modJsonPath))
+                        {
+                            try
+                            {
+                                meta = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(modJsonPath));
+                            }
+                            catch { }
+                        }
+
+                        if (meta == null)
+                        {
+                            meta = new Metadata();
+                        }
+
+                        meta.tags = defaultTags;
+                        File.WriteAllText(modJsonPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
+                        updatedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Global.logger.WriteLine($"Could not save mod.json for {mod.name}: {ex.Message}", LoggerType.Error);
+                    }
+
+                    // Rebuild TagItems on mod
+                    mod.TagItems.Clear();
+                    foreach (var tag in defaultTags)
+                    {
+                        var tagItem = new ModTag { Name = tag };
+                        ResolveModTagIcon(tagItem, mod);
+                        tagItem.IsActive = ActiveCategories.Any(ac => CategoryMatches(ac, tag)) ||
+                                           ActiveSections.Any(asSec => CategoryMatches(asSec, tag));
+                        mod.TagItems.Add(tagItem);
+                    }
+                }
+
+                UpdateModCounts();
+                UpdateModTagActiveStates();
+                RefreshModList();
+                Global.logger.WriteLine($"Successfully reset tags for {updatedCount} mod(s).", LoggerType.Info);
+            }
+            catch (Exception ex)
+            {
+                Global.logger.WriteLine($"Error resetting tags: {ex.Message}", LoggerType.Error);
+            }
+        }
+
+        private List<string> GetDefaultTagsForMod(Mod mod)
+        {
+            var defaultTags = new List<string>();
+            string currentModDirectory = Global.GetCurrentModDirectory();
+            string modJsonPath = $@"{currentModDirectory}{Global.s}{mod.name}{Global.s}mod.json";
+
+            Metadata meta = null;
+            if (File.Exists(modJsonPath))
+            {
+                try
+                {
+                    meta = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(modJsonPath));
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrEmpty(meta?.cat))
+            {
+                defaultTags.Add(meta.cat);
+            }
+            if (!string.IsNullOrEmpty(meta?.subcategory) && !defaultTags.Contains(meta.subcategory, StringComparer.OrdinalIgnoreCase))
+            {
+                defaultTags.Add(meta.subcategory);
+            }
+
+            if (defaultTags.Count == 0)
+            {
+                if (!string.IsNullOrEmpty(mod.cat) && !mod.cat.Equals("Unknown", StringComparison.OrdinalIgnoreCase))
+                    defaultTags.Add(mod.cat);
+                if (!string.IsNullOrEmpty(mod.subcategory) && !defaultTags.Contains(mod.subcategory, StringComparer.OrdinalIgnoreCase))
+                    defaultTags.Add(mod.subcategory);
+            }
+
+            if (defaultTags.Count == 0)
+            {
+                defaultTags.Add("Unknown");
+            }
+
+            return defaultTags;
         }
 
         private async void DeleteItem_Click(object sender, RoutedEventArgs e)
@@ -2380,6 +2522,7 @@ namespace Striverum
             LaunchButton.IsEnabled = false;
             OpenModsButton.IsEnabled = false;
             UpdateButton.IsEnabled = false;
+            ResetTagsButton.IsEnabled = false;
             EditLoadoutsButton.IsEnabled = false;
             LoadoutsBox.IsEnabled = false;
             LauncherOptionsBox.IsEnabled = false;
@@ -2539,7 +2682,7 @@ namespace Striverum
             Button button = sender as Button;
             var item = button?.DataContext as GameBananaRecord;
             if (item != null)
-                new ModDownloader().BrowserDownload(Global.config.CurrentGame, item);
+                DownloadQueueManager.Instance.QueueRecord(item, Global.config.CurrentGame);
         }
         private void AltDownload_Click(object sender, RoutedEventArgs e)
         {
@@ -2651,6 +2794,7 @@ namespace Striverum
         private void OpenModDetails(GameBananaRecord item)
         {
             if (item == null) return;
+            item.IsInstalled = IsRecordInstalled(item);
             HomepageButton.Content = $"{(TypeBox.SelectedValue as ComboBoxItem)?.Content.ToString().Trim().TrimEnd('s')} Page";
             if (item.Compatible)
                 DownloadButton.Visibility = Visibility.Visible;
@@ -3000,6 +3144,88 @@ namespace Striverum
             DiscordButton.Visibility = Visibility.Visible;
         }
 
+        public static bool IsRecordInstalled(GameBananaRecord record)
+        {
+            if (record == null || Global.ModList == null || Global.ModList.Count == 0)
+                return false;
+
+            string recordCleanTitle = string.Concat(record.Title.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+            string recordUrl = record.Link?.ToString()?.TrimEnd('/');
+            string recordId = null;
+            if (!string.IsNullOrEmpty(recordUrl))
+            {
+                var match = Regex.Match(recordUrl, @"\d+$");
+                if (match.Success) recordId = match.Value;
+            }
+
+            foreach (var mod in Global.ModList)
+            {
+                if (mod == null) continue;
+
+                // 1. Check by GameBanana submission ID from homepage URL
+                if (mod.homepage != null && !string.IsNullOrEmpty(recordId))
+                {
+                    string modUrl = mod.homepage.ToString().TrimEnd('/');
+                    if (modUrl.EndsWith("/" + recordId) || Regex.IsMatch(modUrl, @"[^\d]" + recordId + @"$"))
+                        return true;
+                }
+
+                // 2. Check by mod folder name matching cleaned title
+                if (!string.IsNullOrEmpty(mod.name))
+                {
+                    if (string.Equals(mod.name, recordCleanTitle, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(mod.name, record.Title, StringComparison.OrdinalIgnoreCase))
+                        return true;
+
+                    // Also check for multiple versions / renamed copies: "Title (2)", etc.
+                    if (mod.name.StartsWith(recordCleanTitle + " (", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static void UpdateInstalledStatuses(IEnumerable<GameBananaRecord> records)
+        {
+            if (records == null) return;
+            foreach (var r in records)
+            {
+                r.IsInstalled = IsRecordInstalled(r);
+            }
+        }
+
+        private void OnQueueProgressChanged(DownloadProgressInfo info)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                DownloadQueuePanel.Visibility = Visibility.Visible;
+                QueueStatusIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_ArrowDown;
+                QueueStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+                QueueCountText.Text = $"{info.CurrentIndex}/{info.TotalCount}";
+                QueueProgressBar.IsIndeterminate = info.IsIndeterminate;
+                if (!info.IsIndeterminate)
+                {
+                    QueueProgressBar.Value = Math.Max(0, Math.Min(100, info.Percentage));
+                }
+                QueueSizeText.Text = info.StatusText;
+            });
+        }
+
+        private void OnQueueAllCompleted()
+        {
+            Dispatcher.Invoke(async () =>
+            {
+                QueueStatusIcon.Icon = FontAwesome5.EFontAwesomeIcon.Solid_Check;
+                QueueStatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+                QueueSizeText.Text = "Done!";
+                QueueProgressBar.IsIndeterminate = false;
+                QueueProgressBar.Value = 100;
+                await Task.Delay(2500);
+                DownloadQueuePanel.Visibility = Visibility.Collapsed;
+            });
+        }
+
         private static int page = 1;
         private void DecrementPage(object sender, RoutedEventArgs e)
         {
@@ -3020,8 +3246,10 @@ namespace Striverum
         }
         private static bool filterSelect;
         private static bool searched = false;
+        private static int currentFilterRequestId = 0;
         private async void RefreshFilter()
         {
+            int thisRequestId = ++currentFilterRequestId;
             NSFWCheckbox.IsEnabled = false;
             ZsJsonCheckbox.IsEnabled = false;
             ColorZCheckbox.IsEnabled = false;
@@ -3041,15 +3269,22 @@ namespace Striverum
             filterSelect = true;
             PageBox.SelectedValue = page;
             filterSelect = false;
-            Page.Text = $"Page {page}";
+            int initialTotal = FeedGenerator.CurrentFeed?.TotalPages > 0 ? (int)FeedGenerator.CurrentFeed.TotalPages : 1;
+            Page.Text = $"Page {page} / {initialTotal}";
             LoadingBar.Visibility = Visibility.Visible;
             FeedBox.Visibility = Visibility.Collapsed;
             PageLeft.IsEnabled = false;
-            var search = searched ? SearchBar.Text : null;
+            var search = !string.IsNullOrWhiteSpace(SearchBar.Text) ? SearchBar.Text.Trim() : null;
+            searched = search != null;
             await FeedGenerator.GetFeed(page, 0, (TypeFilter)TypeBox.SelectedIndex, (FeedFilter)FilterBox.SelectedIndex, (GameBananaCategory)CatBox.SelectedItem,
                 (GameBananaCategory)SubCatBox.SelectedItem, (PerPageBox.SelectedIndex + 1) * 10, (bool)NSFWCheckbox.IsChecked, search, (bool)ZsJsonCheckbox.IsChecked, (bool)ColorZCheckbox.IsChecked);
+            if (thisRequestId != currentFilterRequestId)
+            {
+                return;
+            }
             if (FeedGenerator.CurrentFeed?.Records != null)
             {
+                UpdateInstalledStatuses(FeedGenerator.CurrentFeed.Records);
                 if (NSFWCheckbox.IsChecked != true)
                     FeedBox.ItemsSource = new ObservableCollection<GameBananaRecord>(FeedGenerator.CurrentFeed.Records.Where(r => !r.IsNsfw));
                 else
@@ -3064,28 +3299,58 @@ namespace Striverum
                 LoadingBar.Visibility = Visibility.Collapsed;
                 ErrorPanel.Visibility = Visibility.Visible;
                 BrowserRefreshButton.Visibility = Visibility.Visible;
-                if (FeedGenerator.exception.Message.Contains("JSON tokens"))
+                int errTotal = Math.Max(1, (int)(FeedGenerator.CurrentFeed?.TotalPages ?? 1));
+                Page.Text = $"Page {page} / {errTotal}";
+                filterSelect = true;
+                PageBox.ItemsSource = Enumerable.Range(1, errTotal).ToList();
+                PageBox.SelectedValue = page;
+                filterSelect = false;
+                PageLeft.IsEnabled = page > 1;
+                PageRight.IsEnabled = page < errTotal;
+                PageBox.IsEnabled = true;
+                PerPageBox.IsEnabled = true;
+                CatBox.IsEnabled = true;
+                SubCatBox.IsEnabled = true;
+                TypeBox.IsEnabled = true;
+                FilterBox.IsEnabled = true;
+                GameFilterBox.IsEnabled = true;
+                SearchBar.IsEnabled = true;
+                SearchButton.IsEnabled = true;
+                NSFWCheckbox.IsEnabled = true;
+                ZsJsonCheckbox.IsEnabled = true;
+                ColorZCheckbox.IsEnabled = true;
+                ClearCacheButton.IsEnabled = true;
+                string exMsg = FeedGenerator.exception?.Message ?? "";
+                if (exMsg.Contains("JSON tokens") || exMsg.Contains("invalid start of a value") || FeedGenerator.exception is System.Text.Json.JsonException)
                 {
-                    BrowserMessage.Text = "Uh oh! Striverum failed to deserialize the GameBanana feed.";
+                    BrowserMessage.Text = "GameBanana returned a temporary error or invalid response. Please click Retry.";
                     return;
                 }
-                switch (Regex.Match(FeedGenerator.exception.Message, @"\d+").Value)
+                if (exMsg.Contains("429"))
+                {
+                    BrowserMessage.Text = "GameBanana rate limit reached. Please wait a few moments and click Retry.";
+                    return;
+                }
+                switch (Regex.Match(exMsg, @"\d+").Value)
                 {
                     case "443":
                         BrowserMessage.Text = "Your internet connection is down.";
                         break;
                     case "500":
+                    case "502":
                     case "503":
                     case "504":
-                        BrowserMessage.Text = "GameBanana's servers are down.";
+                        BrowserMessage.Text = "GameBanana's servers are experiencing issues or high load.";
                         break;
                     default:
-                        BrowserMessage.Text = FeedGenerator.exception.Message;
+                        BrowserMessage.Text = exMsg;
                         break;
                 }
                 return;
             }
-            if (page < FeedGenerator.CurrentFeed.TotalPages)
+            int totalPages = Math.Max(1, (int)(FeedGenerator.CurrentFeed?.TotalPages ?? 1));
+            Page.Text = $"Page {page} / {totalPages}";
+            if (page < totalPages)
                 PageRight.IsEnabled = true;
             if (page != 1)
                 PageLeft.IsEnabled = true;
@@ -3101,7 +3366,10 @@ namespace Striverum
                 BrowserMessage.Visibility = Visibility.Visible;
                 BrowserMessage.Text = "Striverum couldn't find any mods.";
             }
-            PageBox.ItemsSource = Enumerable.Range(1, (int)(FeedGenerator.CurrentFeed.TotalPages));
+            filterSelect = true;
+            PageBox.ItemsSource = Enumerable.Range(1, totalPages).ToList();
+            PageBox.SelectedValue = page;
+            filterSelect = false;
 
             LoadingBar.Visibility = Visibility.Collapsed;
             CatBox.IsEnabled = true;
@@ -3123,6 +3391,9 @@ namespace Striverum
         {
             if (IsLoaded && !filterSelect)
             {
+                if (searched && FilterBox.SelectedIndex == 3)
+                    return;
+
                 if (!searched || FilterBox.SelectedIndex != 3)
                 {
                     filterSelect = true;
@@ -3496,8 +3767,15 @@ namespace Striverum
                 return;
             }
 
-            SearchBar.Clear();
-            searched = false;
+            if (string.IsNullOrWhiteSpace(SearchBar.Text))
+            {
+                SearchBar.Clear();
+                searched = false;
+            }
+            else
+            {
+                searched = true;
+            }
             filterSelect = true;
 
             BrowseCategoryPills.Clear();
@@ -3693,9 +3971,9 @@ namespace Striverum
 
         private void PageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!filterSelect && IsLoaded)
+            if (!filterSelect && IsLoaded && PageBox.SelectedValue is int newPage && newPage != page)
             {
-                page = (int)PageBox.SelectedValue;
+                page = newPage;
                 RefreshFilter();
             }
         }
@@ -4010,6 +4288,7 @@ namespace Striverum
                 LaunchButton.IsEnabled = false;
                 OpenModsButton.IsEnabled = false;
                 UpdateButton.IsEnabled = false;
+                ResetTagsButton.IsEnabled = false;
                 EditLoadoutsButton.IsEnabled = false;
                 LoadoutsBox.IsEnabled = false;
                 LauncherOptionsBox.IsEnabled = false;
@@ -4023,28 +4302,28 @@ namespace Striverum
 
         private void Search()
         {
-            if (!filterSelect && IsLoaded && !String.IsNullOrWhiteSpace(SearchBar.Text))
+            if (!filterSelect && IsLoaded)
             {
-                filterSelect = true;
-                FilterBox.ItemsSource = FilterBoxListWhenSearched;
-                FilterBox.SelectedIndex = 3;
-                NSFWCheckbox.IsChecked = true;
-                // Set categories
-                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == 0))
-                    CatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == 0).OrderBy(y => y.ID));
-                else
-                    CatBox.ItemsSource = None;
-                CatBox.SelectedIndex = 0;
-                var cat = (GameBananaCategory)CatBox.SelectedValue;
-                if (cats[0][(TypeFilter)TypeBox.SelectedIndex].Any(x => x.RootID == cat.ID))
-                    SubCatBox.ItemsSource = All.Concat(cats[0][(TypeFilter)TypeBox.SelectedIndex].Where(x => x.RootID == cat.ID).OrderBy(y => y.ID));
-                else
-                    SubCatBox.ItemsSource = None;
-                SubCatBox.SelectedIndex = 0;
-                filterSelect = false;
-                searched = true;
-                page = 1;
-                RefreshFilter();
+                if (!String.IsNullOrWhiteSpace(SearchBar.Text))
+                {
+                    filterSelect = true;
+                    FilterBox.ItemsSource = FilterBoxListWhenSearched;
+                    FilterBox.SelectedIndex = 3;
+                    filterSelect = false;
+                    searched = true;
+                    page = 1;
+                    RefreshFilter();
+                }
+                else if (searched)
+                {
+                    filterSelect = true;
+                    FilterBox.ItemsSource = FilterBoxList;
+                    FilterBox.SelectedIndex = 1;
+                    filterSelect = false;
+                    searched = false;
+                    page = 1;
+                    RefreshFilter();
+                }
             }
         }
         private void SearchBar_KeyDown(object sender, KeyEventArgs e)

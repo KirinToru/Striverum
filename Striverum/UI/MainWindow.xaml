@@ -20,6 +20,19 @@
             <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
             <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
             <Setter Property="local:SmoothScrollHelper.IsEnabled" Value="True"/>
+            <Setter Property="Background" Value="#181818"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBox}">
+                        <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                            <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}">
+                                <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style TargetType="{x:Type ScrollViewer}">
             <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
@@ -91,6 +104,37 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#1B5E20"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="#1B5E20"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Red Danger Button Style (e.g. Reset Tags) -->
+        <Style x:Key="RedDangerButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedTopButton}">
+            <Setter Property="Background" Value="#C62828"/>
+            <Setter Property="BorderBrush" Value="#E53935"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#EF5350"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#B71C1C"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#C62828"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
@@ -498,6 +542,14 @@
                             </Style>
                         </Image.Style>
                     </Image>
+                    <!-- Installed indicator badge: Green circle with white checkmark on top-left of preview -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,15,0,0" Panel.ZIndex="5"
+                            Background="#2E7D32" BorderBrush="#81C784" BorderThickness="1" CornerRadius="12" Width="24" Height="24"
+                            Visibility="{Binding IsInstalled, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"
+                            ToolTip="Mod is installed in Striverum">
+                        <fa5:ImageAwesome Icon="Solid_Check" Height="11" Width="11" Foreground="#FFFFFF"
+                                          VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
                     <!-- 18+ badge on top right of preview for NSFW mods -->
                     <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,15,12,0" Panel.ZIndex="5"
                             Background="#D32F2F" CornerRadius="10" MinWidth="22" Height="20" Padding="4,0"
@@ -710,14 +762,16 @@
                             <TextBlock Margin="10" Foreground="#f2f2f2" FontWeight="Medium" FontSize="18" VerticalAlignment="Center" Text="{Binding Path=DateUpdated,StringFormat={}Updated {0}}"/>
                         </Border>
                     </Popup>
-                    <StackPanel Name="StatPanel" Background="Transparent" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="4">
-                        <fa5:ImageAwesome Name="DownloadIcon" Margin="0,0,5,0" Height="15" Icon="Solid_Download" Foreground="#f2f2f2"/>
-                        <TextBlock Name="DownloadText" Margin="5,0,10,0" VerticalAlignment="Center" Foreground="#f2f2f2" Text="{Binding Path=DownloadString}" />
-                        <fa5:ImageAwesome Name="LikeIcon" Margin="5,0,5,0" Height="15" Icon="Solid_Heart" Foreground="#f2f2f2"/>
-                        <TextBlock Name="LikeText" Margin="5,0,10,0" VerticalAlignment="Center" Foreground="#f2f2f2" Text="{Binding Path=LikeString}" />
-                        <fa5:ImageAwesome Name="ViewIcon" Margin="5,0,5,0" Height="15" Icon="Solid_Eye" Foreground="#f2f2f2"/>
-                        <TextBlock Name="ViewText" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="#f2f2f2" Text="{Binding Path=ViewString}" />
-                    </StackPanel>
+                    <Grid Grid.Row="4" Margin="5,0,5,0">
+                        <StackPanel Name="StatPanel" Background="Transparent" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0">
+                            <fa5:ImageAwesome Name="DownloadIcon" Margin="0,0,5,0" Height="13" Icon="Solid_Download" Foreground="#888888"/>
+                            <TextBlock Name="DownloadText" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#888888" Text="{Binding Path=DownloadString}" FontSize="11"/>
+                            <fa5:ImageAwesome Name="LikeIcon" Margin="0,0,5,0" Height="13" Icon="Solid_Heart" Foreground="#888888"/>
+                            <TextBlock Name="LikeText" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#888888" Text="{Binding Path=LikeString}" FontSize="11"/>
+                            <fa5:ImageAwesome Name="ViewIcon" Margin="0,0,5,0" Height="13" Icon="Solid_Eye" Foreground="#888888"/>
+                            <TextBlock Name="ViewText" Margin="0,0,0,0" VerticalAlignment="Center" Foreground="#888888" Text="{Binding Path=ViewString}" FontSize="11"/>
+                        </StackPanel>
+                    </Grid>
                     <Popup PlacementTarget="{Binding ElementName=StatPanel}" HorizontalAlignment="Center" AllowsTransparency="True">
                         <Popup.Style>
                             <Style TargetType="Popup">
@@ -832,6 +886,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <ComboBox Name="GameBox" Width="0" Height="0" Margin="0" Visibility="Collapsed" SelectionChanged="GameBox_SelectionChanged" DropDownClosed="GameBox_DropDownClosed">
                             <ComboBoxItem IsSelected="True">
@@ -847,9 +902,10 @@
                         <Button Style="{StaticResource LaunchButtonStyle}" Name="LaunchButton" Margin="0,0,8,0" Grid.Column="4" Content="Launch" Click="Launch_Click"/>
                         <ComboBox Style="{StaticResource RoundedTopComboBox}" Grid.Column="5" Margin="0,0,8,0" Name="LauncherOptionsBox" SelectionChanged="LauncherOptionsBox_SelectionChanged"/>
                         <Button Style="{StaticResource RoundedTopButton}" Name="OpenModsButton" Margin="0,0,8,0" Grid.Column="6" Content="Add Mods" Click="ModsFolder_Click"/>
-                        <Button Style="{StaticResource RoundedTopButton}" Name="UpdateButton" Margin="0,0,10,0" Grid.Column="7" Content="Update Mods" Click="Update_Click"/>
+                        <Button Style="{StaticResource RoundedTopButton}" Name="UpdateButton" Margin="0,0,8,0" Grid.Column="7" Content="Update Mods" Click="Update_Click"/>
+                        <Button Style="{StaticResource RedDangerButtonStyle}" Name="ResetTagsButton" Margin="0,0,10,0" Grid.Column="8" Content="Reset Tags" Click="ResetAllTags_Click" ToolTip="Reset all mod tags to default categories"/>
 
-                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="8" Margin="0,5,0,0">
+                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="9" Margin="0,5,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="2*" MinWidth="300"/>
@@ -1087,6 +1143,9 @@
                                                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#242424"/>
+                                                        </Trigger>
                                                         <Trigger Property="IsSelected" Value="True">
                                                             <Setter TargetName="Bd" Property="Background" Value="#3A3A3A"/>
                                                             <Setter TargetName="Bd" Property="BorderBrush" Value="#4C4C4C"/>
@@ -1197,9 +1256,9 @@
                                              VerticalScrollBarVisibility="Auto" IsReadOnly="True" IsDocumentEnabled="True" FontWeight="Medium"/>
                             </Grid>
                         </Grid>
-                        <GridSplitter Grid.Row="2" Grid.ColumnSpan="6" HorizontalAlignment="Stretch" Height="10" Background="Transparent" />
+                        <GridSplitter Grid.Row="2" Grid.ColumnSpan="9" HorizontalAlignment="Stretch" Height="10" Background="Transparent" />
 
-                        <RichTextBox FontFamily="{StaticResource Monospace}" FontSize="12" Margin="10,3,10,10" Name="ConsoleWindow" Background="#202020" BorderBrush="#424242" ClipToBounds="False" Grid.Row="3" Grid.Column="0" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Grid.ColumnSpan="8" TextChanged="ScrollToBottom">
+                        <RichTextBox FontFamily="{StaticResource Monospace}" FontSize="12" Margin="10,3,10,10" Name="ConsoleWindow" Background="#202020" BorderBrush="#424242" ClipToBounds="False" Grid.Row="3" Grid.Column="0" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Grid.ColumnSpan="9" TextChanged="ScrollToBottom">
                             <RichTextBox.Resources>
                                 <Style TargetType="{x:Type Paragraph}">
                                     <Setter Property="Margin" Value="0" />
@@ -1367,6 +1426,18 @@
                                             Style="{StaticResource RoundedTopButton}" Height="30" Width="120" FontSize="12"/>
                                     <Button Name="DownloadButton" Click="Download_Click" Content="Download" IsEnabled="{Binding Path=Compatible}" Margin="0,0,8,0"
                                             Style="{StaticResource LaunchButtonStyle}" Height="30" Width="120" FontSize="12"/>
+                                    <!-- Installed Badge (to the right of Download button) -->
+                                    <Border Name="InstalledBadge" VerticalAlignment="Center" Margin="0,0,8,0"
+                                            Background="#1B3E20" BorderBrush="#2E7D32" BorderThickness="1" CornerRadius="15" Height="30" Padding="8,0,12,0"
+                                            Visibility="{Binding IsInstalled, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"
+                                            ToolTip="This mod is installed in Striverum">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#4CAF50" CornerRadius="8" Width="16" Height="16" Margin="0,0,6,0">
+                                                <fa5:ImageAwesome Icon="Solid_Check" Height="9" Width="9" Foreground="#FFFFFF" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Installed" FontSize="12" FontWeight="SemiBold" Foreground="#81C784" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
                                     <Button Name="HomepageButton" Click="Homepage_Click" Margin="0,0,8,0"
                                             Style="{StaticResource RoundedTopButton}" Height="30" Width="120" FontSize="12"/>
                                     <Button Click="CloseDesc_Click" Content="Close"
@@ -1429,22 +1500,53 @@
                             </Button>
                         </StackPanel>
 
-                        <!-- Right controls: Pagination -->
+                        <!-- Right controls: Download Queue Progress + Pagination -->
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Download Queue Progress Panel (Visible only when downloading/queued) -->
+                            <Border Name="DownloadQueuePanel" Visibility="Collapsed" Background="#1E1E1E" BorderBrush="#333333" BorderThickness="1" CornerRadius="14" Height="28" Margin="0,0,12,0" Padding="10,0,12,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <fa5:ImageAwesome Name="QueueStatusIcon" Icon="Solid_ArrowDown" Height="11" Width="11" Foreground="#4CAF50" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <!-- Mod count: current/total (e.g. 1/3) -->
+                                    <TextBlock Name="QueueCountText" Text="1/1" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <!-- Progress bar -->
+                                    <ProgressBar Name="QueueProgressBar" Width="110" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                 Background="#2A2A2A" Foreground="#E53935" BorderThickness="0">
+                                        <ProgressBar.Resources>
+                                            <Style TargetType="ProgressBar">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ProgressBar">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="4" ClipToBounds="True">
+                                                                <Grid>
+                                                                    <Border Name="PART_Track"/>
+                                                                    <Border Name="PART_Indicator" Background="#E53935" CornerRadius="4" HorizontalAlignment="Left"/>
+                                                                </Grid>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ProgressBar.Resources>
+                                    </ProgressBar>
+                                    <!-- Size progress: downloaded / total -->
+                                    <TextBlock Name="QueueSizeText" Text="0 MB / 0 MB" FontSize="11" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
                             <Button Name="PageLeft" Style="{StaticResource RoundIconButtonStyle}"
                                     Width="28" Height="28" Margin="0,0,6,0" IsEnabled="False"
-                                    Click="DecrementPage">
+                                    Click="DecrementPage" ToolTip="Previous page">
                                 <fa5:ImageAwesome Icon="Solid_ChevronLeft" Foreground="#CCCCCC" Height="10" Width="10"/>
                             </Button>
-                            <TextBlock Name="Page" Text="Page 1" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12"
+                            <TextBlock Name="Page" Text="Page 1 / 1" Foreground="#F2F2F2" FontWeight="SemiBold" FontSize="12"
                                        VerticalAlignment="Center" Margin="4,0,8,0"/>
                             <Button Name="PageRight" Style="{StaticResource RoundIconButtonStyle}"
                                     Width="28" Height="28" Margin="0,0,8,0" IsEnabled="False"
-                                    Click="IncrementPage">
+                                    Click="IncrementPage" ToolTip="Next page">
                                 <fa5:ImageAwesome Icon="Solid_ChevronRight" Foreground="#CCCCCC" Height="10" Width="10"/>
                             </Button>
                             <ComboBox Name="PageBox" Style="{StaticResource RoundedTopComboBox}"
-                                      Width="65" Height="28" IsEnabled="False"
+                                      Width="65" Height="28" IsEnabled="False" ToolTip="Jump to page"
                                       SelectionChanged="PageBox_SelectionChanged"/>
                         </StackPanel>
                     </DockPanel>
@@ -1454,15 +1556,15 @@
                         <!-- Right controls: Per Page + GameBanana + Hidden Legacy ComboBoxes -->
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                             <!-- Hidden ComboBoxes kept for logic state bindings -->
-                            <ComboBox Name="TypeBox" Visibility="Collapsed" SelectionChanged="TypeFilterSelectionChanged">
+                            <ComboBox Name="TypeBox" Visibility="Collapsed">
                                 <ComboBoxItem xml:space="preserve" IsSelected="True">Mods</ComboBoxItem>
                                 <ComboBoxItem xml:space="preserve">WiPs</ComboBoxItem>
                                 <ComboBoxItem xml:space="preserve">Sounds</ComboBoxItem>
                             </ComboBox>
-                            <ComboBox Name="CatBox" Visibility="Collapsed" SelectionChanged="MainFilterSelectionChanged"/>
-                            <ComboBox Name="SubCatBox" Visibility="Collapsed" SelectionChanged="SubFilterSelectionChanged"/>
+                            <ComboBox Name="CatBox" Visibility="Collapsed"/>
+                            <ComboBox Name="SubCatBox" Visibility="Collapsed"/>
                             <!-- Hidden GameFilterBox kept for code-behind bindings -->
-                            <ComboBox Margin="0" Width="0" Height="0" Visibility="Collapsed" IsEnabled="False" Name="GameFilterBox" SelectionChanged="GameFilterSelectionChanged">
+                            <ComboBox Margin="0" Width="0" Height="0" Visibility="Collapsed" IsEnabled="False" Name="GameFilterBox">
                                 <ComboBoxItem>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Image Source="../Assets/Icons/ggs.png" Width="27" Margin="4,0,10,0"/>

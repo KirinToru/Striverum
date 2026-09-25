@@ -177,8 +177,27 @@ namespace Striverum
         [JsonPropertyName("text")]
         public string Text { get; set; }
     }
-    public class GameBananaRecord
+    public class GameBananaRecord : System.ComponentModel.INotifyPropertyChanged
     {
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+
+        private bool _isInstalled;
+        [JsonIgnore]
+        public bool IsInstalled
+        {
+            get => _isInstalled;
+            set
+            {
+                if (_isInstalled != value)
+                {
+                    _isInstalled = value;
+                    OnPropertyChanged(nameof(IsInstalled));
+                }
+            }
+        }
+
         [JsonPropertyName("_sName")]
         public string Title { get; set; }
         [JsonIgnore]
