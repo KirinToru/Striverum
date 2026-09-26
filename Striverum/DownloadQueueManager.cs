@@ -329,13 +329,23 @@ namespace Striverum
             await Task.Run(() =>
             {
                 string modDir = Global.GetCurrentModDirectory();
-                string cleanTitle = string.Concat(item.Record.Title.Split(Path.GetInvalidFileNameChars()));
-                string targetDir = Path.Combine(modDir, cleanTitle);
+                string cleanTitle = string.Concat(item.Record.Title.Split(Path.GetInvalidFileNameChars())).Trim();
+                string rawFileName = item.FileName ?? "";
+                string fileTitle = !string.IsNullOrEmpty(rawFileName)
+                    ? Path.GetFileNameWithoutExtension(rawFileName)
+                    : cleanTitle;
+                string cleanFileTitle = string.Concat(fileTitle.Split(Path.GetInvalidFileNameChars())).Trim();
+
+                bool isMultiFile = (item.Record.AllFiles != null && item.Record.AllFiles.Count > 1) ||
+                                   (!string.IsNullOrEmpty(cleanFileTitle) && !string.Equals(cleanTitle, cleanFileTitle, StringComparison.OrdinalIgnoreCase));
+
+                string folderName = isMultiFile ? $"{cleanTitle} - {cleanFileTitle}" : cleanTitle;
+                string targetDir = Path.Combine(modDir, folderName);
 
                 int counter = 2;
                 while (Directory.Exists(targetDir))
                 {
-                    targetDir = Path.Combine(modDir, $"{cleanTitle} ({counter})");
+                    targetDir = Path.Combine(modDir, $"{folderName} ({counter})");
                     counter++;
                 }
 
@@ -373,7 +383,9 @@ namespace Striverum
                     {
                         var metadata = new Metadata
                         {
-                            name = cleanTitle,
+                            name = Path.GetFileName(targetDir),
+                            group = cleanTitle,
+                            filetitle = cleanFileTitle,
                             submitter = item.Record.Owner?.Name,
                             description = item.Record.Description,
                             filedescription = item.FileDescription,
@@ -412,6 +424,22 @@ namespace Striverum
 
                         string json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                         File.WriteAllText(modJsonPath, json);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var metadata = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(modJsonPath));
+                            if (metadata != null)
+                            {
+                                metadata.group = cleanTitle;
+                                metadata.filetitle = cleanFileTitle;
+                                if (!string.IsNullOrEmpty(item.FileDescription))
+                                    metadata.filedescription = item.FileDescription;
+                                File.WriteAllText(modJsonPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+                            }
+                        }
+                        catch { }
                     }
 
                     try { File.Delete(archiveFilePath); } catch { }

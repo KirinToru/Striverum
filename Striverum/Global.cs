@@ -62,7 +62,7 @@ namespace Striverum
 
             if (ModList != null)
             {
-                gameConfig.Loadouts[gameConfig.CurrentLoadout] = ModList;
+                gameConfig.Loadouts[gameConfig.CurrentLoadout] = new ObservableCollection<Mod>(ModList.Where(m => !m.isGroupHeader));
             }
 
             try

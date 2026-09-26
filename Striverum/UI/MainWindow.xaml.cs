@@ -778,32 +778,32 @@ namespace Striverum
                     {
                         foreach (var sub in cat.Subcategories)
                         {
-                            sub.ModCount = Global.ModList.Count(m =>
+                            sub.ModCount = Global.ModList.Count(m => !m.isGroupHeader && (
                                 (!string.IsNullOrEmpty(m.subcategory) && CategoryMatches(m.subcategory, sub.Name)) ||
-                                (m.tags != null && m.tags.Any(t => CategoryMatches(t, sub.Name)))
+                                (m.tags != null && m.tags.Any(t => CategoryMatches(t, sub.Name))))
                             );
                         }
-                        cat.ModCount = Global.ModList.Count(m =>
+                        cat.ModCount = Global.ModList.Count(m => !m.isGroupHeader && (
                             (!string.IsNullOrEmpty(m.subcategory) && (CategoryMatches(m.subcategory, cat.Name) || cat.Subcategories.Any(sub => CategoryMatches(sub.Name, m.subcategory)))) ||
-                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name) || cat.Subcategories.Any(sub => CategoryMatches(sub.Name, t))))
+                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name) || cat.Subcategories.Any(sub => CategoryMatches(sub.Name, t)))))
                         );
                     }
                     else
                     {
-                        cat.ModCount = Global.ModList.Count(m =>
+                        cat.ModCount = Global.ModList.Count(m => !m.isGroupHeader && (
                             (!string.IsNullOrEmpty(m.subcategory) && CategoryMatches(m.subcategory, cat.Name)) ||
-                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name)))
+                            (m.tags != null && m.tags.Any(t => CategoryMatches(t, cat.Name))))
                         );
                     }
                 }
 
                 // Update section count (directly or through contained categories and subcategories)
-                sec.ModCount = Global.ModList.Count(m =>
+                sec.ModCount = Global.ModList.Count(m => !m.isGroupHeader && (
                     (!string.IsNullOrEmpty(m.cat) && CategoryMatches(m.cat, sec.Name)) ||
                     (m.tags != null && m.tags.Any(t => CategoryMatches(t, sec.Name))) ||
                     sec.Categories.Any(c =>
                         (!string.IsNullOrEmpty(m.subcategory) && (CategoryMatches(m.subcategory, c.Name) || (c.HasSubcategories && c.Subcategories.Any(sub => CategoryMatches(sub.Name, m.subcategory))))) ||
-                        (m.tags != null && m.tags.Any(t => CategoryMatches(t, c.Name) || (c.HasSubcategories && c.Subcategories.Any(sub => CategoryMatches(sub.Name, t)))))
+                        (m.tags != null && m.tags.Any(t => CategoryMatches(t, c.Name) || (c.HasSubcategories && c.Subcategories.Any(sub => CategoryMatches(sub.Name, t))))))
                     )
                 );
             }
@@ -817,48 +817,601 @@ namespace Striverum
             Mod mod = item as Mod;
             if (mod == null) return false;
 
-            // Nothing selected = show all
-            if (ActiveSections.Count == 0 && ActiveCategories.Count == 0)
-                return true;
+            // If this is a child mod and parent group is collapsed, hide it
+            if (mod.isChild && mod.parentGroup != null && !mod.parentGroup.isExpanded)
+                return false;
 
-            // 1. If categories are selected, check if mod matches any active category
-            if (ActiveCategories.Count > 0)
+            bool Matches(Mod m)
             {
-                if (!string.IsNullOrEmpty(mod.subcategory) && ActiveCategories.Any(ac => CategoryMatches(ac, mod.subcategory)))
+                if (ActiveSections.Count == 0 && ActiveCategories.Count == 0)
                     return true;
-                if (mod.tags != null && mod.tags.Any(t => ActiveCategories.Any(ac => CategoryMatches(ac, t))))
-                    return true;
-            }
 
-            // 2. If sections are selected, check if mod matches an active section with no specific categories active
-            if (ActiveSections.Count > 0)
-            {
-                var sectionsWithActiveCats = _sections
-                    .Where(s => s.Categories.Any(c => ActiveCategories.Any(ac => CategoryMatches(ac, c.Name))))
-                    .Select(s => s.Name)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                string modSection = mod.cat;
-                if ((string.IsNullOrEmpty(modSection) || (mod.tags != null && !mod.tags.Any(t => CategoryMatches(t, modSection)))) && mod.tags != null)
+                if (ActiveCategories.Count > 0)
                 {
-                    modSection = _sections.FirstOrDefault(s => mod.tags.Any(t => CategoryMatches(t, s.Name)))?.Name;
-                }
-
-                if (!string.IsNullOrEmpty(modSection) && ActiveSections.Any(asSec => CategoryMatches(asSec, modSection)))
-                {
-                    if (!sectionsWithActiveCats.Contains(modSection))
+                    if (!string.IsNullOrEmpty(m.subcategory) && ActiveCategories.Any(ac => CategoryMatches(ac, m.subcategory)))
+                        return true;
+                    if (m.tags != null && m.tags.Any(t => ActiveCategories.Any(ac => CategoryMatches(ac, t))))
                         return true;
                 }
 
-                // Check if any tag on the mod directly matches an active section that has no specific active categories
-                if (mod.tags != null && mod.tags.Any(t => ActiveSections.Any(asSec => CategoryMatches(asSec, t) && !sectionsWithActiveCats.Contains(asSec))))
+                if (ActiveSections.Count > 0)
                 {
-                    return true;
+                    var sectionsWithActiveCats = _sections
+                        .Where(s => s.Categories.Any(c => ActiveCategories.Any(ac => CategoryMatches(ac, c.Name))))
+                        .Select(s => s.Name)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    string modSection = m.cat;
+                    if ((string.IsNullOrEmpty(modSection) || (m.tags != null && !m.tags.Any(t => CategoryMatches(t, modSection)))) && m.tags != null)
+                    {
+                        modSection = _sections.FirstOrDefault(s => m.tags.Any(t => CategoryMatches(t, s.Name)))?.Name;
+                    }
+
+                    if (!string.IsNullOrEmpty(modSection) && ActiveSections.Any(asSec => CategoryMatches(asSec, modSection)))
+                    {
+                        if (!sectionsWithActiveCats.Contains(modSection))
+                            return true;
+                    }
+
+                    if (m.tags != null && m.tags.Any(t => ActiveSections.Any(asSec => CategoryMatches(asSec, t) && !sectionsWithActiveCats.Contains(asSec))))
+                    {
+                        return true;
+                    }
                 }
+
+                return false;
             }
+
+            if (mod.isGroupHeader)
+            {
+                if (Matches(mod)) return true;
+                if (mod.children != null && mod.children.Any(c => Matches(c))) return true;
+                return false;
+            }
+
+            if (Matches(mod)) return true;
+            if (mod.parentGroup != null && Matches(mod.parentGroup)) return true;
 
             return false;
         }
+
+        private readonly HashSet<string> _collapsedGroups = new(StringComparer.OrdinalIgnoreCase);
+
+        private void GroupExpander_Click(object sender, RoutedEventArgs e)
+        {
+            if (e != null) e.Handled = true;
+            var elem = sender as FrameworkElement;
+            var groupMod = elem?.DataContext as Mod;
+            if (groupMod != null && groupMod.isGroupHeader)
+            {
+                groupMod.isExpanded = !groupMod.isExpanded;
+                if (groupMod.isExpanded)
+                    _collapsedGroups.Remove(groupMod.displayName);
+                else
+                    _collapsedGroups.Add(groupMod.displayName);
+
+                RefreshModList();
+            }
+        }
+
+        private void ModListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var dep = e.OriginalSource as DependencyObject;
+            while (dep != null && !(dep is ListBoxItem) && dep != ModListView)
+            {
+                dep = VisualTreeHelper.GetParent(dep);
+            }
+            if (dep is ListBoxItem item && item.DataContext is Mod mod && mod.isGroupHeader)
+            {
+                GroupExpander_Click(item, null);
+            }
+        }
+
+        private void ApplyModGrouping()
+        {
+            if (Global.ModList == null || Global.ModList.Count == 0) return;
+
+            var realMods = Global.ModList.Where(m => !m.isGroupHeader).ToList();
+
+            foreach (var m in realMods)
+            {
+                m.isGroupHeader = false;
+                m.isChild = false;
+                m.parentGroup = null;
+                m.children = null;
+            }
+
+            (string key, string title) GetGroupInfo(Mod m)
+            {
+                if (!string.IsNullOrWhiteSpace(m.group))
+                {
+                    return ("grp:" + m.group.Trim().ToLowerInvariant(), m.group.Trim());
+                }
+                if (m.homepage != null && m.homepage.ToString().Contains("gamebanana.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    string cleanUrl = m.homepage.GetLeftPart(UriPartial.Path).TrimEnd('/').ToLowerInvariant();
+                    string derivedTitle = Regex.Replace(m.name, @"\s*\(\d+\)$", "").Trim();
+                    if (derivedTitle.Contains(" - "))
+                    {
+                        derivedTitle = derivedTitle.Substring(0, derivedTitle.IndexOf(" - ")).Trim();
+                    }
+                    return ("url:" + cleanUrl, derivedTitle);
+                }
+                var match = Regex.Match(m.name, @"^(.*?)\s*\(\d+\)$");
+                if (match.Success)
+                {
+                    string baseTitle = match.Groups[1].Value.Trim();
+                    return ("base:" + baseTitle.ToLowerInvariant(), baseTitle);
+                }
+                return (null, null);
+            }
+
+            var groupMap = new Dictionary<string, ModGroupInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in realMods)
+            {
+                var (key, title) = GetGroupInfo(m);
+                if (!string.IsNullOrEmpty(key))
+                {
+                    if (!groupMap.TryGetValue(key, out var entry))
+                    {
+                        entry = new ModGroupInfo { title = title };
+                        groupMap[key] = entry;
+                    }
+                    entry.members.Add(m);
+                }
+            }
+
+            var activeGroups = new Dictionary<string, ModGroupInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in groupMap)
+            {
+                if (kvp.Value.members.Count >= 2)
+                {
+                    activeGroups[kvp.Key] = kvp.Value;
+                }
+            }
+
+            var resultList = new List<Mod>();
+            var processedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var groupsNeedingResolution = new List<ModGroupInfo>();
+
+            foreach (var m in realMods)
+            {
+                var (key, title) = GetGroupInfo(m);
+                if (!string.IsNullOrEmpty(key) && activeGroups.TryGetValue(key, out var grpInfo))
+                {
+                    if (!processedGroups.Contains(key))
+                    {
+                        processedGroups.Add(key);
+                        if (grpInfo.members.Any(c => string.IsNullOrEmpty(c.filetitle)))
+                        {
+                            groupsNeedingResolution.Add(grpInfo);
+                        }
+
+                        var firstMember = grpInfo.members[0];
+                        bool isExpanded = !_collapsedGroups.Contains(grpInfo.title);
+
+                        var groupHeader = new Mod
+                        {
+                            name = $"[Group] {grpInfo.title}",
+                            displayName = grpInfo.title,
+                            displaySubtext = firstMember.subcategory,
+                            isGroupHeader = true,
+                            isExpanded = isExpanded,
+                            cat = firstMember.cat,
+                            subcategory = firstMember.subcategory,
+                            caticon = firstMember.caticon,
+                            cachedIconPath = firstMember.cachedIconPath,
+                            tags = new List<string>(firstMember.tags ?? new List<string>()),
+                            homepage = firstMember.homepage,
+                            lastupdate = grpInfo.members.Max(x => x.lastupdate),
+                            children = new List<Mod>(grpInfo.members)
+                        };
+
+                        foreach (var tagItem in firstMember.TagItems)
+                        {
+                            groupHeader.TagItems.Add(new ModTag
+                            {
+                                Name = tagItem.Name,
+                                IconPath = tagItem.IconPath,
+                                FaIcon = tagItem.FaIcon,
+                                IsActive = tagItem.IsActive
+                            });
+                        }
+
+                        int activeCount = grpInfo.members.Count(c => c.enabled);
+                        groupHeader.childCountText = $"{grpInfo.members.Count} options • {activeCount} active";
+
+                        resultList.Add(groupHeader);
+
+                        foreach (var child in grpInfo.members)
+                        {
+                            child.isChild = true;
+                            child.parentGroup = groupHeader;
+
+                            if (!string.IsNullOrEmpty(child.filetitle))
+                            {
+                                child.displayName = child.filetitle;
+                            }
+                            else if (child.name.StartsWith(grpInfo.title + " - ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                child.displayName = child.name.Substring(grpInfo.title.Length + 3).Trim();
+                            }
+                            else
+                            {
+                                string foundFileName = null;
+                                if (child.paks != null && child.paks.Count > 0)
+                                {
+                                    foundFileName = Path.GetFileNameWithoutExtension(child.paks.Keys.First());
+                                }
+                                else
+                                {
+                                    string modFolder = Path.Combine(Global.GetCurrentModDirectory(), child.name);
+                                    if (Directory.Exists(modFolder))
+                                    {
+                                        var paks = Directory.GetFiles(modFolder, "*.pak", SearchOption.AllDirectories);
+                                        if (paks.Length > 0)
+                                            foundFileName = Path.GetFileNameWithoutExtension(paks[0]);
+                                    }
+                                }
+
+                                if (!string.IsNullOrEmpty(foundFileName))
+                                    child.displayName = foundFileName;
+                                else
+                                    child.displayName = child.name;
+                            }
+
+                            if (!string.IsNullOrEmpty(child.filedescription))
+                                child.displaySubtext = child.filedescription;
+                            else
+                                child.displaySubtext = child.subcategory;
+
+                            resultList.Add(child);
+                        }
+                    }
+                }
+                else
+                {
+                    m.isChild = false;
+                    m.displayName = m.name;
+                    m.displaySubtext = m.subcategory;
+                    resultList.Add(m);
+                }
+            }
+
+            Global.ModList.Clear();
+            foreach (var item in resultList)
+            {
+                Global.ModList.Add(item);
+            }
+
+            if (groupsNeedingResolution.Count > 0)
+            {
+                ResolveMissingGroupFileTitlesAsync(groupsNeedingResolution);
+            }
+        }
+
+        private static readonly HashSet<string> _resolvingGroupIds = new HashSet<string>();
+
+        private void ResolveMissingGroupFileTitlesAsync(List<ModGroupInfo> groupsNeedingResolution)
+        {
+            if (groupsNeedingResolution == null || groupsNeedingResolution.Count == 0) return;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    using (var httpClient = new HttpClient())
+                    {
+                        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Striverum");
+
+                        var groupsWithId = new List<(string modId, ModGroupInfo grp)>();
+                        foreach (var grp in groupsNeedingResolution)
+                        {
+                            string hp = grp.homepage?.ToString();
+                            if (string.IsNullOrEmpty(hp))
+                            {
+                                hp = grp.members.FirstOrDefault(m => m.homepage != null)?.homepage?.ToString();
+                            }
+                            if (!string.IsNullOrEmpty(hp))
+                            {
+                                var match = Regex.Match(hp, @"/mods/(\d+)");
+                                if (match.Success)
+                                {
+                                    string id = match.Groups[1].Value;
+                                    lock (_resolvingGroupIds)
+                                    {
+                                        if (_resolvingGroupIds.Add(id))
+                                        {
+                                            groupsWithId.Add((id, grp));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (groupsWithId.Count == 0) return;
+
+                        var chunks = groupsWithId
+                            .Select((item, index) => new { item, index })
+                            .GroupBy(x => x.index / 20)
+                            .Select(g => g.Select(x => x.item).ToList())
+                            .ToList();
+
+                        bool anyUpdated = false;
+
+                        foreach (var chunk in chunks)
+                        {
+                            try
+                            {
+                                string rowIds = string.Join(",", chunk.Select(c => c.modId));
+                                string url = $"https://gamebanana.com/apiv6/Mod/Multi?_csvProperties=_aFiles&_csvRowIds={rowIds}";
+                                string json = await httpClient.GetStringAsync(url);
+
+                                using (var doc = JsonDocument.Parse(json))
+                                {
+                                    var root = doc.RootElement;
+                                    if (root.ValueKind == JsonValueKind.Array)
+                                    {
+                                        int elemIndex = 0;
+                                        foreach (var element in root.EnumerateArray())
+                                        {
+                                            if (elemIndex >= chunk.Count) break;
+                                            var targetGroup = chunk[elemIndex].grp;
+                                            elemIndex++;
+
+                                            if (element.TryGetProperty("_aFiles", out var filesProp) && filesProp.ValueKind == JsonValueKind.Array)
+                                            {
+                                                var fileList = new List<(string fileName, string desc)>();
+                                                foreach (var f in filesProp.EnumerateArray())
+                                                {
+                                                    string fName = f.TryGetProperty("_sFile", out var fn) ? fn.GetString() : null;
+                                                    string fDesc = f.TryGetProperty("_sDescription", out var fd) ? fd.GetString() : null;
+                                                    if (!string.IsNullOrEmpty(fName))
+                                                        fileList.Add((fName, fDesc));
+                                                }
+
+                                                if (fileList.Count > 0)
+                                                {
+                                                    var usedFileIndices = new HashSet<int>();
+
+                                                    for (int mIdx = 0; mIdx < targetGroup.members.Count; mIdx++)
+                                                    {
+                                                        var member = targetGroup.members[mIdx];
+                                                        if (!string.IsNullOrEmpty(member.filetitle)) continue;
+
+                                                        int bestFileIdx = -1;
+                                                        string pakOrName = member.displayName ?? member.name;
+
+                                                        for (int fIdx = 0; fIdx < fileList.Count; fIdx++)
+                                                        {
+                                                            if (usedFileIndices.Contains(fIdx)) continue;
+                                                            string cleanGb = Path.GetFileNameWithoutExtension(fileList[fIdx].fileName);
+                                                            string normGb = cleanGb.Replace("_", " ").ToLowerInvariant();
+                                                            string normPak = pakOrName.Replace("_", " ").ToLowerInvariant();
+                                                            if (normGb.Contains(normPak) || normPak.Contains(normGb))
+                                                            {
+                                                                bestFileIdx = fIdx;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if (bestFileIdx == -1)
+                                                        {
+                                                            for (int fIdx = 0; fIdx < fileList.Count; fIdx++)
+                                                            {
+                                                                if (!usedFileIndices.Contains(fIdx))
+                                                                {
+                                                                    bestFileIdx = fIdx;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+
+                                                        if (bestFileIdx != -1)
+                                                        {
+                                                            usedFileIndices.Add(bestFileIdx);
+                                                            var chosen = fileList[bestFileIdx];
+                                                            string cleanTitle = Path.GetFileNameWithoutExtension(chosen.fileName);
+
+                                                            member.filetitle = cleanTitle;
+                                                            member.displayName = cleanTitle;
+                                                            if (!string.IsNullOrEmpty(chosen.desc))
+                                                            {
+                                                                member.filedescription = chosen.desc;
+                                                                member.displaySubtext = chosen.desc;
+                                                            }
+
+                                                            string modDir = Path.Combine(Global.GetCurrentModDirectory(), member.name);
+                                                            string modJsonPath = Path.Combine(modDir, "mod.json");
+                                                            if (File.Exists(modJsonPath))
+                                                            {
+                                                                try
+                                                                {
+                                                                    var meta = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(modJsonPath));
+                                                                    if (meta != null)
+                                                                    {
+                                                                        meta.group = targetGroup.title;
+                                                                        meta.filetitle = cleanTitle;
+                                                                        if (!string.IsNullOrEmpty(chosen.desc))
+                                                                            meta.filedescription = chosen.desc;
+                                                                        File.WriteAllText(modJsonPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
+                                                                    }
+                                                                }
+                                                                catch { }
+                                                            }
+
+                                                            anyUpdated = true;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Global.logger.WriteLine($"Error resolving GameBanana file names: {ex.Message}", LoggerType.Warning);
+                            }
+                        }
+
+                        if (anyUpdated)
+                        {
+                            Application.Current?.Dispatcher?.Invoke(() =>
+                            {
+                                RefreshModList();
+                            });
+                        }
+                    }
+                }
+                catch { }
+            });
+        }
+
+        private void SyncMods_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string modsFolder = Global.config?.Configs?[Global.config.CurrentGame]?.ModsFolder;
+                if (string.IsNullOrEmpty(modsFolder) || !Directory.Exists(modsFolder))
+                {
+                    string steamCommon = @"C:\Program Files (x86)\Steam\steamapps\common\GUILTY GEAR STRIVE\RED\Content\Paks\~mods";
+                    if (Directory.Exists(steamCommon))
+                    {
+                        modsFolder = steamCommon;
+                        if (Global.config?.Configs != null && Global.config.Configs.ContainsKey(Global.config.CurrentGame))
+                        {
+                            Global.config.Configs[Global.config.CurrentGame].ModsFolder = steamCommon;
+                            Global.UpdateConfig();
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Could not find the game's ~mods folder.\nPlease run 'Setup' to configure your game path first.", "Sync Mods", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                }
+
+                var activeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var activePaks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var dir in Directory.GetDirectories(modsFolder, "*", SearchOption.AllDirectories))
+                {
+                    activeDirs.Add(Path.GetFileName(dir));
+                }
+
+                foreach (var file in Directory.GetFiles(modsFolder, "*.pak", SearchOption.AllDirectories))
+                {
+                    string fileName = Path.GetFileNameWithoutExtension(file);
+                    activePaks.Add(fileName);
+                    if (fileName.EndsWith("_9_P", StringComparison.OrdinalIgnoreCase))
+                        activePaks.Add(fileName.Substring(0, fileName.Length - 4));
+                    else if (fileName.EndsWith("_P", StringComparison.OrdinalIgnoreCase))
+                        activePaks.Add(fileName.Substring(0, fileName.Length - 2));
+                }
+
+                var parentContent = Path.GetDirectoryName(modsFolder);
+                var logicModsFolder = parentContent != null ? Path.Combine(Path.GetDirectoryName(parentContent) ?? "", "LogicMods") : "";
+                var win64ModsFolder = parentContent != null ? Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(parentContent) ?? "") ?? "", "Binaries", "Win64", "Mods") : "";
+                var activeLogicMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (!string.IsNullOrEmpty(logicModsFolder) && Directory.Exists(logicModsFolder))
+                {
+                    foreach (var f in Directory.GetFiles(logicModsFolder, "*", SearchOption.AllDirectories))
+                        activeLogicMods.Add(Path.GetFileName(f));
+                }
+                if (!string.IsNullOrEmpty(win64ModsFolder) && Directory.Exists(win64ModsFolder))
+                {
+                    foreach (var f in Directory.GetFiles(win64ModsFolder, "*", SearchOption.AllDirectories))
+                        activeLogicMods.Add(Path.GetFileName(f));
+                }
+
+                int enabledCount = 0;
+                string currentModDir = Global.GetCurrentModDirectory();
+
+                foreach (var mod in Global.ModList.Where(m => !m.isGroupHeader))
+                {
+                    bool isMatch = false;
+
+                    if (activeDirs.Contains(mod.name))
+                    {
+                        isMatch = true;
+                    }
+
+                    if (!isMatch && mod.paks != null && mod.paks.Count > 0)
+                    {
+                        foreach (var pakPath in mod.paks.Keys.ToList())
+                        {
+                            string pakBaseName = Path.GetFileNameWithoutExtension(pakPath);
+                            if (activePaks.Contains(pakBaseName))
+                            {
+                                isMatch = true;
+                                mod.paks[pakPath] = true;
+                            }
+                        }
+                    }
+
+                    if (!isMatch)
+                    {
+                        string modPath = Path.Combine(currentModDir, mod.name);
+                        if (Directory.Exists(modPath))
+                        {
+                            try
+                            {
+                                foreach (var pak in Directory.GetFiles(modPath, "*.pak", SearchOption.AllDirectories))
+                                {
+                                    string pakBaseName = Path.GetFileNameWithoutExtension(pak);
+                                    if (activePaks.Contains(pakBaseName))
+                                    {
+                                        isMatch = true;
+                                        if (mod.paks != null)
+                                            mod.paks[pak] = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!isMatch)
+                                {
+                                    foreach (var f in Directory.GetFiles(modPath, "*", SearchOption.AllDirectories))
+                                    {
+                                        if (activeLogicMods.Contains(Path.GetFileName(f)))
+                                        {
+                                            isMatch = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+
+                    mod.enabled = isMatch;
+                    if (isMatch)
+                        enabledCount++;
+                }
+
+                foreach (var groupHeader in Global.ModList.Where(m => m.isGroupHeader))
+                {
+                    if (groupHeader.children != null)
+                    {
+                        int activeCount = groupHeader.children.Count(c => c.enabled);
+                        groupHeader.childCountText = $"{groupHeader.children.Count} options • {activeCount} active";
+                    }
+                }
+
+                Global.UpdateConfig();
+                RefreshModList();
+
+                Global.logger.WriteLine($"Successfully synchronized mods: {enabledCount} active mods matched from game ~mods folder.", LoggerType.Info);
+                MessageBox.Show($"Synchronized successfully!\n\nMatched and enabled {enabledCount} mods found in your game's ~mods folder.", "Sync Mods", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                Global.logger.WriteLine($"Error during sync: {ex.Message}", LoggerType.Error);
+                MessageBox.Show($"Error synchronizing mods: {ex.Message}", "Sync Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void TagBubble_Click(object sender, RoutedEventArgs e)
         {
@@ -1465,6 +2018,7 @@ namespace Striverum
             {
                 foreach (var mod in Global.ModList.ToList())
                 {
+                    if (mod.isGroupHeader) continue;
                     string modPath = $"{currentModDirectory}{Global.s}{mod.name}";
                     if (!Directory.Exists(modPath))
                     {
@@ -1501,7 +2055,7 @@ namespace Striverum
             InitDefaultSections();
 
             // Load metadata for each mod and build TagItems
-            foreach (var mod in Global.ModList)
+            foreach (var mod in Global.ModList.Where(m => !m.isGroupHeader))
             {
                 string modJsonPath = $@"{currentModDirectory}{Global.s}{mod.name}{Global.s}mod.json";
                 bool isGameBanana = false;
@@ -1516,6 +2070,9 @@ namespace Striverum
                             mod.subcategory = meta.subcategory;
                             mod.caticon = meta.caticon;
                             mod.homepage = meta.homepage;
+                            mod.group = meta.group;
+                            mod.filetitle = meta.filetitle;
+                            mod.filedescription = meta.filedescription;
 
                             if (meta.homepage != null && meta.homepage.ToString().Contains("gamebanana.com", StringComparison.OrdinalIgnoreCase))
                             {
@@ -1613,6 +2170,8 @@ namespace Striverum
                 }
             }
 
+            ApplyModGrouping();
+
             UpdateModCounts();
 
             await Task.Run(() =>
@@ -1631,7 +2190,7 @@ namespace Striverum
                     }
                     catch { }
 
-                    Stats.Text = $"{Global.ModList?.Count ?? 0} mods • {fileCount:N0} files • {StringConverters.FormatSize(totalSize)} • v{version}";
+                    Stats.Text = $"{Global.ModList?.Count(m => !m.isGroupHeader) ?? 0} mods • {fileCount:N0} files • {StringConverters.FormatSize(totalSize)} • v{version}";
                 });
             });
             Global.config.Configs[Global.config.CurrentGame].ModList = Global.ModList;
@@ -1711,6 +2270,13 @@ namespace Striverum
             if (mod != null)
             {
                 mod.enabled = true;
+                if (mod.isChild && mod.parentGroup != null)
+                {
+                    int activeCount = mod.parentGroup.children.Count(c => c.enabled);
+                    mod.parentGroup.childCountText = $"{mod.parentGroup.children.Count} options • {activeCount} active";
+                    mod.parentGroup.OnPropertyChanged(nameof(Mod.childCountText));
+                    mod.parentGroup.OnPropertyChanged(nameof(Mod.activeChildCount));
+                }
                 List<Mod> temp = Global.config.Configs[Global.config.CurrentGame].ModList.ToList();
                 foreach (var m in temp)
                 {
@@ -1730,6 +2296,13 @@ namespace Striverum
             if (mod != null)
             {
                 mod.enabled = false;
+                if (mod.isChild && mod.parentGroup != null)
+                {
+                    int activeCount = mod.parentGroup.children.Count(c => c.enabled);
+                    mod.parentGroup.childCountText = $"{mod.parentGroup.children.Count} options • {activeCount} active";
+                    mod.parentGroup.OnPropertyChanged(nameof(Mod.childCountText));
+                    mod.parentGroup.OnPropertyChanged(nameof(Mod.activeChildCount));
+                }
                 List<Mod> temp = Global.config.Configs[Global.config.CurrentGame].ModList.ToList();
                 foreach (var m in temp)
                 {
@@ -1968,6 +2541,27 @@ namespace Striverum
             {
                 e.Handled = true;
             }
+            else if (ModListView.SelectedItem is Mod selectedMod)
+            {
+                var contextMenu = ModListView.ContextMenu;
+                if (contextMenu != null)
+                {
+                    foreach (var item in contextMenu.Items)
+                    {
+                        if (item is MenuItem mi)
+                        {
+                            if (mi.Header?.ToString() == "Configure Paks" || mi.Header?.ToString() == "Rename Mod")
+                            {
+                                mi.IsEnabled = !selectedMod.isGroupHeader;
+                            }
+                            else if (mi.Header?.ToString()?.StartsWith("Delete Mod") == true)
+                            {
+                                mi.Header = selectedMod.isGroupHeader ? "Delete Mod Group" : "Delete Mod";
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void EditTags_Click(object sender, RoutedEventArgs e)
@@ -2126,6 +2720,66 @@ namespace Striverum
             {
                 if (row == null) continue;
 
+                if (row.isGroupHeader)
+                {
+                    var groupDialogResult = MessageBox.Show(
+                        $"Are you sure you want to delete the mod group \"{row.displayName}\" and all {row.children?.Count ?? 0} of its files?" + Environment.NewLine + "This cannot be undone.",
+                        $"Deleting {row.displayName}: Confirmation",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (groupDialogResult == MessageBoxResult.Yes)
+                    {
+                        try
+                        {
+                            if (ModsWatcher != null)
+                                ModsWatcher.EnableRaisingEvents = false;
+
+                            var childrenToDelete = row.children?.ToList() ?? new List<Mod>();
+                            foreach (var child in childrenToDelete)
+                            {
+                                string modDir = $@"{Global.GetCurrentModDirectory()}{Global.s}{child.name}";
+                                if (Directory.Exists(modDir))
+                                {
+                                    await Task.Run(() =>
+                                    {
+                                        try { Directory.Delete(modDir, true); } catch { }
+                                    });
+                                }
+
+                                if (Global.config.Configs.ContainsKey(Global.config.CurrentGame) &&
+                                    Global.config.Configs[Global.config.CurrentGame].Loadouts != null)
+                                {
+                                    foreach (var loadoutList in Global.config.Configs[Global.config.CurrentGame].Loadouts.Values)
+                                    {
+                                        var match = loadoutList.FirstOrDefault(m => m.name == child.name);
+                                        if (match != null)
+                                            loadoutList.Remove(match);
+                                    }
+                                }
+
+                                Global.ModList.Remove(child);
+                            }
+
+                            Global.ModList.Remove(row);
+                            Global.logger.WriteLine($"Deleted group {row.displayName}.", LoggerType.Info);
+                            ShowMetadata(null);
+                            Refresh();
+                            Global.UpdateConfig();
+                        }
+                        catch (Exception ex)
+                        {
+                            Global.logger.WriteLine($"Couldn't delete group {row.displayName} ({ex.Message})", LoggerType.Error);
+                        }
+                        finally
+                        {
+                            if (ModsWatcher != null)
+                                ModsWatcher.EnableRaisingEvents = true;
+                        }
+                    }
+                    continue;
+                }
+
                 var dialogResult = MessageBox.Show(
                     $"Are you sure you want to delete {row.name}?" + Environment.NewLine + "This cannot be undone.",
                     $"Deleting {row.name}: Confirmation",
@@ -2211,7 +2865,7 @@ namespace Striverum
                 bool? Patched = null;
                 if (!ModLoader.Restart(path, MoviesFolder, SplashFolder, SoundsFolder))
                     return false;
-                var mods = Global.config.Configs[Global.config.CurrentGame].ModList.Where(x => x.enabled).ToList();
+                var mods = Global.config.Configs[Global.config.CurrentGame].ModList.Where(x => x.enabled && !x.isGroupHeader).ToList();
                 mods.Reverse();
 
 
@@ -2251,7 +2905,10 @@ namespace Striverum
             foreach (var row in temp)
                 if (row != null)
                 {
-                    var folderName = $@"{Global.GetCurrentModDirectory()}{Global.s}{row.name}";
+                    string targetFolder = row.name;
+                    if (row.isGroupHeader && row.children != null && row.children.Count > 0)
+                        targetFolder = row.children[0].name;
+                    var folderName = $@"{Global.GetCurrentModDirectory()}{Global.s}{targetFolder}";
                     if (Directory.Exists(folderName))
                     {
                         try
@@ -2571,7 +3228,6 @@ namespace Striverum
                     }
 
                     hyperlink.RequestNavigate += (s, a) => OpenUrl(s, a);
-                    hyperlink.Click += (s, a) => OpenUrl(s, a);
 
                     paragraph.Inlines.Add(hyperlink);
                 }
@@ -2586,6 +3242,13 @@ namespace Striverum
 
         private void ShowMetadata(string mod)
         {
+            if (mod != null && mod.StartsWith("[Group] "))
+            {
+                var grp = Global.ModList?.FirstOrDefault(m => m.name == mod);
+                var firstChild = grp?.children?.FirstOrDefault();
+                if (firstChild != null)
+                    mod = firstChild.name;
+            }
             if (mod == null || !File.Exists($"{Global.GetCurrentModDirectory()}{Global.s}{mod}{Global.s}mod.json"))
             {
                 DescriptionWindow.Document = defaultFlow;
@@ -2669,7 +3332,12 @@ namespace Striverum
         {
             Mod row = (Mod)ModListView.SelectedItem;
             if (row != null)
-                ShowMetadata(row.name);
+            {
+                if (row.isGroupHeader && row.children != null && row.children.Count > 0)
+                    ShowMetadata(row.children[0].name);
+                else
+                    ShowMetadata(row.name);
+            }
         }
         private void ModGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -2752,7 +3420,6 @@ namespace Striverum
                     }
 
                     hyperlink.RequestNavigate += (s, a) => OpenUrl(s, a);
-                    hyperlink.Click += (s, a) => OpenUrl(s, a);
 
                     paragraph.Inlines.Add(hyperlink);
                 }
@@ -3178,9 +3845,13 @@ namespace Striverum
                         return true;
 
                     // Also check for multiple versions / renamed copies: "Title (2)", etc.
-                    if (mod.name.StartsWith(recordCleanTitle + " (", StringComparison.OrdinalIgnoreCase))
+                    if (mod.name.StartsWith(recordCleanTitle + " (", StringComparison.OrdinalIgnoreCase) ||
+                        mod.name.StartsWith(recordCleanTitle + " - ", StringComparison.OrdinalIgnoreCase))
                         return true;
                 }
+
+                if (!string.IsNullOrEmpty(mod.group) && string.Equals(mod.group, recordCleanTitle, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
 
             return false;
@@ -4381,13 +5052,15 @@ namespace Striverum
             Button btn = sender as Button;
             if (btn != null)
             {
+                var realMods = Global.ModList.Where(x => !x.isGroupHeader).ToList();
                 if (btn.Name == "SortAlphabetically")
                 {
                     var choice = MessageBox.Show($"Confirm sorting all mods alphanumerically?", "Striverum", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (choice == MessageBoxResult.No)
                         return;
                     // Sort alphanumerically
-                    Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderBy(x => x.name, new NaturalSort()).ToList());
+                    Global.ModList = new ObservableCollection<Mod>(realMods.OrderBy(x => x.name, new NaturalSort()).ToList());
+                    ApplyModGrouping();
                     Global.logger.WriteLine("Sorted alphanumerically!", LoggerType.Info);
                 }
                 else if (btn.Name == "GroupEnabled")
@@ -4396,12 +5069,14 @@ namespace Striverum
                     if (choice == MessageBoxResult.No)
                         return;
                     // Move all enabled mods to top
-                    Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderByDescending(x => x.enabled).ToList());
+                    Global.ModList = new ObservableCollection<Mod>(realMods.OrderByDescending(x => x.enabled).ToList());
+                    ApplyModGrouping();
                     Global.logger.WriteLine("Moved all enabled mods to the top!", LoggerType.Info);
                 }
                 else if (btn.Name == "SortCategories")
                 {
-                    Global.ModList = new ObservableCollection<Mod>(Global.ModList.ToList().OrderBy(x => x.cat).ThenBy(x => x.subcategory).ToList());
+                    Global.ModList = new ObservableCollection<Mod>(realMods.OrderBy(x => x.cat).ThenBy(x => x.subcategory).ToList());
+                    ApplyModGrouping();
                     Global.logger.WriteLine("Sorted by Categories!", LoggerType.Info);
                 }
                 await Task.Run(() =>

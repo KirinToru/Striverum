@@ -887,6 +887,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <ComboBox Name="GameBox" Width="0" Height="0" Margin="0" Visibility="Collapsed" SelectionChanged="GameBox_SelectionChanged" DropDownClosed="GameBox_DropDownClosed">
                             <ComboBoxItem IsSelected="True">
@@ -903,9 +904,10 @@
                         <ComboBox Style="{StaticResource RoundedTopComboBox}" Grid.Column="5" Margin="0,0,8,0" Name="LauncherOptionsBox" SelectionChanged="LauncherOptionsBox_SelectionChanged"/>
                         <Button Style="{StaticResource RoundedTopButton}" Name="OpenModsButton" Margin="0,0,8,0" Grid.Column="6" Content="Add Mods" Click="ModsFolder_Click"/>
                         <Button Style="{StaticResource RoundedTopButton}" Name="UpdateButton" Margin="0,0,8,0" Grid.Column="7" Content="Update Mods" Click="Update_Click"/>
-                        <Button Style="{StaticResource RedDangerButtonStyle}" Name="ResetTagsButton" Margin="0,0,10,0" Grid.Column="8" Content="Reset Tags" Click="ResetAllTags_Click" ToolTip="Reset all mod tags to default categories"/>
+                        <Button Style="{StaticResource RoundedTopButton}" Name="SyncModsButton" Margin="0,0,8,0" Grid.Column="8" Content="Sync Mods" Click="SyncMods_Click" ToolTip="Synchronize enabled mods with active mods in game ~mods folder"/>
+                        <Button Style="{StaticResource RedDangerButtonStyle}" Name="ResetTagsButton" Margin="0,0,10,0" Grid.Column="9" Content="Reset Tags" Click="ResetAllTags_Click" ToolTip="Reset all mod tags to default categories"/>
 
-                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="9" Margin="0,5,0,0">
+                        <Grid Name="MiddleGrid" Grid.Row="1" Grid.ColumnSpan="10" Margin="0,5,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="2*" MinWidth="300"/>
@@ -1089,6 +1091,7 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0"
                                      HorizontalContentAlignment="Stretch"
                                      SelectionChanged="ModGrid_SelectionChanged"
+                                     MouseDoubleClick="ModListView_MouseDoubleClick"
                                      ContextMenuOpening="ModListView_ContextMenuOpening">
                                 <ListBox.ContextMenu>
                                     <ContextMenu Style="{StaticResource ModernModContextMenu}">
@@ -1118,6 +1121,11 @@
                                                 <fa5:ImageAwesome Icon="Solid_CloudDownloadAlt" Foreground="#A0A0A0" Height="13" Width="13"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
+                                        <MenuItem Header="Sync with Game Folder" Click="SyncMods_Click" Style="{StaticResource ModernContextMenuItem}">
+                                            <MenuItem.Icon>
+                                                <fa5:ImageAwesome Icon="Solid_SyncAlt" Foreground="#A0A0A0" Height="13" Width="13"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator Style="{StaticResource ModernContextMenuSeparator}"/>
                                         <MenuItem Header="Delete Mod" Click="DeleteItem_Click" Style="{StaticResource ModernContextMenuItem}">
                                             <MenuItem.Icon>
@@ -1143,6 +1151,16 @@
                                                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                                     </Border>
                                                     <ControlTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding isGroupHeader}" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#292929"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#383838"/>
+                                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding isChild}" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#1E1E1E"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#2B2B2B"/>
+                                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                                        </DataTrigger>
                                                         <Trigger Property="IsEnabled" Value="False">
                                                             <Setter TargetName="Bd" Property="Background" Value="#242424"/>
                                                         </Trigger>
@@ -1170,68 +1188,175 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid MinHeight="38">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox Grid.Column="0" Style="{StaticResource ModEnableCheckStyle}"
-                                                      IsChecked="{Binding enabled, Mode=TwoWay}"
-                                                      Checked="OnChecked" Unchecked="OnUnchecked"
-                                                      VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding name}" Foreground="#f2f2f2" FontWeight="SemiBold" FontSize="13"/>
-                                                <TextBlock Text="{Binding subcategory}" Foreground="#888" FontSize="11" Margin="0,2,0,0"/>
-                                            </StackPanel>
-                                            <!-- Tag bubbles (icons in small circles on bottom right) -->
-                                            <ItemsControl Grid.Column="2" ItemsSource="{Binding TagItems}" VerticalAlignment="Center" Margin="6,0,0,0">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal"/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Button Cursor="Hand" Click="TagBubble_Click" Tag="{Binding Name}" Margin="3,0"
-                                                                ToolTip="{Binding Name}" FocusVisualStyle="{x:Null}">
-                                                            <Button.Template>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="TagCircle" CornerRadius="13" Width="26" Height="26"
-                                                                            Background="#383838" BorderBrush="#4A4A4A" BorderThickness="1"
-                                                                            SnapsToDevicePixels="True" ClipToBounds="True">
-                                                                        <Grid>
-                                                                            <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="3"
-                                                                                   RenderOptions.BitmapScalingMode="HighQuality"
-                                                                                   Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
-                                                                            <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="12" Width="12"
-                                                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                              Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
-                                                                        </Grid>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#4A4A4A"/>
-                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#606060"/>
-                                                                        </Trigger>
-                                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#D32F2F"/>
-                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#D32F2F"/>
-                                                                        </DataTrigger>
-                                                                        <MultiDataTrigger>
-                                                                            <MultiDataTrigger.Conditions>
-                                                                                <Condition Binding="{Binding IsActive}" Value="True"/>
-                                                                                <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
-                                                                            </MultiDataTrigger.Conditions>
-                                                                            <Setter TargetName="TagCircle" Property="Background" Value="#EF5350"/>
-                                                                            <Setter TargetName="TagCircle" Property="BorderBrush" Value="#EF5350"/>
-                                                                        </MultiDataTrigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Button.Template>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                            <!-- GROUP HEADER ROW (when isGroupHeader == true) -->
+                                            <Grid Visibility="{Binding isGroupHeader, Converter={x:Static local:BoolToVisibilityConverter.Instance}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Expander Chevron Toggle Button -->
+                                                <Button Grid.Column="0" Click="GroupExpander_Click" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="4,4,8,4" Margin="0" FocusVisualStyle="{x:Null}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="Transparent">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                    <Grid Width="16" Height="16">
+                                                        <fa5:ImageAwesome Icon="Solid_ChevronDown" Foreground="#CCCCCC" Height="11" Width="11"
+                                                                          Visibility="{Binding isExpanded, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                        <fa5:ImageAwesome Icon="Solid_ChevronRight" Foreground="#888888" Height="11" Width="11"
+                                                                          Visibility="{Binding isExpanded, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                    </Grid>
+                                                </Button>
+
+                                                <!-- Group Icon -->
+                                                <Border Grid.Column="1" Width="26" Height="26" CornerRadius="5" Background="#2C2424" BorderBrush="#4A3434" BorderThickness="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                    <fa5:ImageAwesome Icon="Solid_LayerGroup" Foreground="#EF5350" Height="12" Width="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Group Title & Subtext & Count Badge -->
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding displayName}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="13.5" VerticalAlignment="Center"/>
+                                                        <Border Background="#333333" BorderBrush="#484848" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding childCountText}" Foreground="#B0B0B0" FontSize="10.5" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding displaySubtext}" Foreground="#888888" FontSize="11" Margin="0,2,0,0"/>
+                                                </StackPanel>
+
+                                                <!-- Tag bubbles for Group Header -->
+                                                <ItemsControl Grid.Column="3" ItemsSource="{Binding TagItems}" VerticalAlignment="Center" Margin="6,0,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Cursor="Hand" Click="TagBubble_Click" Tag="{Binding Name}" Margin="3,0"
+                                                                    ToolTip="{Binding Name}" FocusVisualStyle="{x:Null}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border x:Name="TagCircle" CornerRadius="13" Width="26" Height="26"
+                                                                                Background="#383838" BorderBrush="#4A4A4A" BorderThickness="1"
+                                                                                SnapsToDevicePixels="True" ClipToBounds="True">
+                                                                            <Grid>
+                                                                                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="3"
+                                                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                                                       Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                                                <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="12" Width="12"
+                                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                                  Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                                            </Grid>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#4A4A4A"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#606060"/>
+                                                                            </Trigger>
+                                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#D32F2F"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#D32F2F"/>
+                                                                            </DataTrigger>
+                                                                            <MultiDataTrigger>
+                                                                                <MultiDataTrigger.Conditions>
+                                                                                    <Condition Binding="{Binding IsActive}" Value="True"/>
+                                                                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                                </MultiDataTrigger.Conditions>
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#EF5350"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#EF5350"/>
+                                                                            </MultiDataTrigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+
+                                            <!-- REGULAR MOD / CHILD MOD ROW (when isGroupHeader == false) -->
+                                            <Grid Visibility="{Binding isGroupHeader, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Tree branch connector for child mods -->
+                                                <Border Grid.Column="0" Visibility="{Binding isChild, Converter={x:Static local:BoolToVisibilityConverter.Instance}}" Margin="4,0,8,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="↳" Foreground="#D32F2F" FontSize="14" FontWeight="Bold" Margin="0,-2,0,0"/>
+                                                </Border>
+
+                                                <!-- Checkbox -->
+                                                <CheckBox Grid.Column="1" Style="{StaticResource ModEnableCheckStyle}"
+                                                          IsChecked="{Binding enabled, Mode=TwoWay}"
+                                                          Checked="OnChecked" Unchecked="OnUnchecked"
+                                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                                                <!-- Mod / Variant Title & Subtext -->
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding displayName}" Foreground="#f2f2f2" FontWeight="SemiBold" FontSize="13"/>
+                                                    <TextBlock Text="{Binding displaySubtext}" Foreground="#888" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+
+                                                <!-- Tag bubbles for Mod -->
+                                                <ItemsControl Grid.Column="3" ItemsSource="{Binding TagItems}" VerticalAlignment="Center" Margin="6,0,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button Cursor="Hand" Click="TagBubble_Click" Tag="{Binding Name}" Margin="3,0"
+                                                                    ToolTip="{Binding Name}" FocusVisualStyle="{x:Null}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border x:Name="TagCircle" CornerRadius="13" Width="26" Height="26"
+                                                                                Background="#383838" BorderBrush="#4A4A4A" BorderThickness="1"
+                                                                                SnapsToDevicePixels="True" ClipToBounds="True">
+                                                                            <Grid>
+                                                                                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="3"
+                                                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                                                       Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}}"/>
+                                                                                <fa5:ImageAwesome Icon="{Binding FaIcon}" Foreground="#E0E0E0" Height="12" Width="12"
+                                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                                  Visibility="{Binding HasImage, Converter={x:Static local:BoolToVisibilityConverter.Instance}, ConverterParameter=Inverse}"/>
+                                                                            </Grid>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#4A4A4A"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#606060"/>
+                                                                            </Trigger>
+                                                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#D32F2F"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#D32F2F"/>
+                                                                            </DataTrigger>
+                                                                            <MultiDataTrigger>
+                                                                                <MultiDataTrigger.Conditions>
+                                                                                    <Condition Binding="{Binding IsActive}" Value="True"/>
+                                                                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                                                </MultiDataTrigger.Conditions>
+                                                                                <Setter TargetName="TagCircle" Property="Background" Value="#EF5350"/>
+                                                                                <Setter TargetName="TagCircle" Property="BorderBrush" Value="#EF5350"/>
+                                                                            </MultiDataTrigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -1256,9 +1381,9 @@
                                              VerticalScrollBarVisibility="Auto" IsReadOnly="True" IsDocumentEnabled="True" FontWeight="Medium"/>
                             </Grid>
                         </Grid>
-                        <GridSplitter Grid.Row="2" Grid.ColumnSpan="9" HorizontalAlignment="Stretch" Height="10" Background="Transparent" />
+                        <GridSplitter Grid.Row="2" Grid.ColumnSpan="10" HorizontalAlignment="Stretch" Height="10" Background="Transparent" />
 
-                        <RichTextBox FontFamily="{StaticResource Monospace}" FontSize="12" Margin="10,3,10,10" Name="ConsoleWindow" Background="#202020" BorderBrush="#424242" ClipToBounds="False" Grid.Row="3" Grid.Column="0" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Grid.ColumnSpan="9" TextChanged="ScrollToBottom">
+                        <RichTextBox FontFamily="{StaticResource Monospace}" FontSize="12" Margin="10,3,10,10" Name="ConsoleWindow" Background="#202020" BorderBrush="#424242" ClipToBounds="False" Grid.Row="3" Grid.Column="0" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Grid.ColumnSpan="10" TextChanged="ScrollToBottom">
                             <RichTextBox.Resources>
                                 <Style TargetType="{x:Type Paragraph}">
                                     <Setter Property="Margin" Value="0" />

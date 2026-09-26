@@ -197,12 +197,23 @@ namespace Striverum
                 game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
-                string ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
+                string cleanTitle = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars())).Trim();
+                string rawFileName = fileName ?? "";
+                string fileTitle = !string.IsNullOrEmpty(rawFileName)
+                    ? Path.GetFileNameWithoutExtension(rawFileName)
+                    : cleanTitle;
+                string cleanFileTitle = string.Concat(fileTitle.Split(Path.GetInvalidFileNameChars())).Trim();
+
+                bool isMultiFile = (record.AllFiles != null && record.AllFiles.Count > 1) ||
+                                   (!string.IsNullOrEmpty(cleanFileTitle) && !string.Equals(cleanTitle, cleanFileTitle, StringComparison.OrdinalIgnoreCase));
+
+                string folderName = isMultiFile ? $"{cleanTitle} - {cleanFileTitle}" : cleanTitle;
+                string ArchiveDestination = Path.Combine(Global.GetCurrentModDirectory(), folderName);
                 // Find a unique destination if it already exists
                 var counter = 2;
                 while (Directory.Exists(ArchiveDestination))
                 {
-                    ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
+                    ArchiveDestination = Path.Combine(Global.GetCurrentModDirectory(), $"{folderName} ({counter})");
                     ++counter;
                 }
                 if (File.Exists(_ArchiveSource))
@@ -247,7 +258,9 @@ namespace Striverum
                         if (!File.Exists($@"{ArchiveDestination}{Global.s}mod.json"))
                         {
                             Metadata metadata = new Metadata();
-                            metadata.name = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()));
+                            metadata.name = Path.GetFileName(ArchiveDestination);
+                            metadata.group = cleanTitle;
+                            metadata.filetitle = cleanFileTitle;
                             metadata.submitter = record.Owner.Name;
                             metadata.description = record.Description;
                             metadata.filedescription = fileDescription;
@@ -284,6 +297,23 @@ namespace Striverum
                             }
                             string metadataString = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                             File.WriteAllText($@"{ArchiveDestination}{Global.s}mod.json", metadataString);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string existingJsonPath = $@"{ArchiveDestination}{Global.s}mod.json";
+                                var metadata = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(existingJsonPath));
+                                if (metadata != null)
+                                {
+                                    metadata.group = cleanTitle;
+                                    metadata.filetitle = cleanFileTitle;
+                                    if (!string.IsNullOrEmpty(fileDescription))
+                                        metadata.filedescription = fileDescription;
+                                    File.WriteAllText(existingJsonPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+                                }
+                            }
+                            catch { }
                         }
                     }
                     catch (Exception e)
@@ -323,12 +353,23 @@ namespace Striverum
                 game = "Guilty Gear -Strive-";
                 string _ArchiveSource = $@"{Global.assemblyLocation}{Global.s}Downloads{Global.s}{fileName}";
                 string _ArchiveType = Path.GetExtension(fileName);
-                string ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))}";
+                string cleanTitle = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars())).Trim();
+                string rawFileName = fileName ?? "";
+                string fileTitle = !string.IsNullOrEmpty(rawFileName)
+                    ? Path.GetFileNameWithoutExtension(rawFileName)
+                    : cleanTitle;
+                string cleanFileTitle = string.Concat(fileTitle.Split(Path.GetInvalidFileNameChars())).Trim();
+
+                bool isMultiFile = (record.Files != null && record.Files.Count > 1) ||
+                                   (!string.IsNullOrEmpty(cleanFileTitle) && !string.Equals(cleanTitle, cleanFileTitle, StringComparison.OrdinalIgnoreCase));
+
+                string folderName = isMultiFile ? $"{cleanTitle} - {cleanFileTitle}" : cleanTitle;
+                string ArchiveDestination = Path.Combine(Global.GetCurrentModDirectory(), folderName);
                 // Find a unique destination if it already exists
                 var counter = 2;
                 while (Directory.Exists(ArchiveDestination))
                 {
-                    ArchiveDestination = $@"{Global.GetCurrentModDirectory()}{Global.s}{string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()))} ({counter})";
+                    ArchiveDestination = Path.Combine(Global.GetCurrentModDirectory(), $"{folderName} ({counter})");
                     ++counter;
                 }
                 if (File.Exists(_ArchiveSource))
@@ -373,7 +414,9 @@ namespace Striverum
                         if (!File.Exists($@"{ArchiveDestination}{Global.s}mod.json"))
                         {
                             Metadata metadata = new Metadata();
-                            metadata.name = string.Concat(record.Title.Split(Path.GetInvalidFileNameChars()));
+                            metadata.name = Path.GetFileName(ArchiveDestination);
+                            metadata.group = cleanTitle;
+                            metadata.filetitle = cleanFileTitle;
                             metadata.submitter = record.Owner.Name;
                             metadata.description = record.Description;
                             metadata.filedescription = fileDescription;
@@ -410,6 +453,23 @@ namespace Striverum
                             }
                             string metadataString = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
                             File.WriteAllText($@"{ArchiveDestination}{Global.s}mod.json", metadataString);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string existingJsonPath = $@"{ArchiveDestination}{Global.s}mod.json";
+                                var metadata = JsonSerializer.Deserialize<Metadata>(File.ReadAllText(existingJsonPath));
+                                if (metadata != null)
+                                {
+                                    metadata.group = cleanTitle;
+                                    metadata.filetitle = cleanFileTitle;
+                                    if (!string.IsNullOrEmpty(fileDescription))
+                                        metadata.filedescription = fileDescription;
+                                    File.WriteAllText(existingJsonPath, JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+                                }
+                            }
+                            catch { }
                         }
                     }
                     catch (Exception e)
